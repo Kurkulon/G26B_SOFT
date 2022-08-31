@@ -12,6 +12,7 @@
 #include "hw_nand.h"
 #include "DMA.h"
 #include "manch.h"
+#include <math.h>
 
 #ifdef WIN32
 
@@ -96,6 +97,7 @@ volatile u16 curShaftCounter = 0;
 
 static bool busy_CRC_CCITT_DMA = false;
 
+u16 waveBuffer[500] = {0};
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1192,13 +1194,13 @@ int Printf(u32 xx, u32 yy, byte c, const char *format, ... )
 	#define PID_GENAB					CONCAT2(PID_,GENAB_TC)
 
 	#if (GENAB_GEN_CLK > 100000000)
-			#define GENAB_PRESC_NUM		8
+			#define GENAB_PRESC_NUM		64
 	#elif (GENAB_GEN_CLK > 50000000)
-			#define GENAB_PRESC_NUM		4
+			#define GENAB_PRESC_NUM		8
 	#elif (GENAB_GEN_CLK > 20000000)
-			#define GENAB_PRESC_NUM		2
+			#define GENAB_PRESC_NUM		4
 	#elif (GENAB_GEN_CLK > 10000000)
-			#define GENAB_PRESC_NUM		1
+			#define GENAB_PRESC_NUM		2
 	#elif (GENAB_GEN_CLK > 5000000)
 			#define GENAB_PRESC_NUM		1
 	#else
@@ -1208,11 +1210,47 @@ int Printf(u32 xx, u32 yy, byte c, const char *format, ... )
 	#define GENAB_PRESC_DIV				CONCAT2(TC_PRESCALER_DIV,GENAB_PRESC_NUM)
 	#define US2GENAB(v)					(((v)*(GENAB_GEN_CLK/GENAB_PRESC_NUM)+500000)/1000000)
 
+	inline void GENAB_ClockEnable()		{ HW::GCLK->PCHCTRL[GCLK_GENAB] = GENAB_GEN|GCLK_CHEN; HW::MCLK->ClockEnable(PID_GENAB); }
+
 #else
 	#error  Must defined PWM_TCC
 #endif
 
-inline void GENAB_ClockEnable()			{ HW::GCLK->PCHCTRL[GCLK_GENAB] = GENAB_GEN|GCLK_CHEN; HW::MCLK->ClockEnable(PID_GENAB); }
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#ifdef DAC_TC
+
+	#define DACTC						HW::DAC_TC
+	#define DACTC_GEN					CONCAT2(GEN_,DAC_TC)
+	#define DACTC_GEN_CLK				CONCAT2(CLK_,DAC_TC) 
+	#define DACTC_IRQ					CONCAT2(DAC_TC,_IRQ)
+	#define GCLK_DACTC					CONCAT2(GCLK_,DAC_TC)
+	#define PID_DACTC					CONCAT2(PID_,DAC_TC)
+
+	#if (DACTC_GEN_CLK > 100000000)
+			#define DACTC_PRESC_NUM		8
+	#elif (DACTC_GEN_CLK > 50000000)
+			#define DACTC_PRESC_NUM		4
+	#elif (DACTC_GEN_CLK > 20000000)
+			#define DACTC_PRESC_NUM		2
+	#elif (DACTC_GEN_CLK > 10000000)
+			#define DACTC_PRESC_NUM		1
+	#elif (DACTC_GEN_CLK > 5000000)
+			#define DACTC_PRESC_NUM		1
+	#else
+			#define DACTC_PRESC_NUM		1
+	#endif
+
+	#define DACTC_PRESC_DIV				CONCAT2(TC_PRESCALER_DIV,DACTC_PRESC_NUM)
+	#define US2DACTC(v)					(((v)*(DACTC_GEN_CLK/DACTC_PRESC_NUM)+500000)/1000000)
+
+	inline void DACTC_ClockEnable()		{ HW::GCLK->PCHCTRL[GCLK_DACTC] = DACTC_GEN|GCLK_CHEN; HW::MCLK->ClockEnable(PID_DACTC); }
+
+#else
+	#error  Must defined PWM_TCC
+#endif
+
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1240,40 +1278,39 @@ inline void GENAB_ClockEnable()			{ HW::GCLK->PCHCTRL[GCLK_GENAB] = GENAB_GEN|GC
 	#endif
 
 	#define PWM_PRESC_DIV				CONCAT2(TCC_PRESCALER_DIV,PWM_PRESC_NUM)
-	#define US2PWM(v)					(((v)*(PWM_GEN_CLK/PWM_PRESC_NUM)+500000)/1000000)
+	#define US2PWM(v)					(((v)*(PWM_GEN_CLK/PWM_PRESC_NUM/1000)+500)/1000)
 
 	//#define ManResetTransmit()			{ MNTTCC->CTRLA = TC_SWRST; while(MNTTCC->SYNCBUSY); }
 	//#define ManDisableTransmit()		{ MNTTCC->CTRLA = 0; MNTTCC->INTENCLR = ~0; }
 	//#define ManEndIRQ()					{ MNTTCC->INTFLAG = ~0; }
 
-	//#define PWM_CC_NUM					CONCAT2(PWM_TCC,_CC_NUM)
+	#define PWM_CC_NUM					CONCAT2(PWM_TCC,_CC_NUM)
 
-	//#define L1_CC_NUM					(L1_WO_NUM % PWM_CC_NUM)
-	//#define L2_CC_NUM					(L2_WO_NUM % PWM_CC_NUM)
+	#define PWMLA_CC_NUM				(PWMLA_WO_NUM % PWM_CC_NUM)
+	#define PWMHA_CC_NUM				(PWMHA_WO_NUM % PWM_CC_NUM)
+	#define PWMLB_CC_NUM				(PWMLB_WO_NUM % PWM_CC_NUM)
+	#define PWMHB_CC_NUM				(PWMHB_WO_NUM % PWM_CC_NUM)
+
+	inline void PWM_ClockEnable()		{ HW::GCLK->PCHCTRL[GCLK_PWM] = PWM_GEN|GCLK_CHEN; HW::MCLK->ClockEnable(PID_PWM); }
 
 #else
 	#error  Must defined PWM_TCC
 #endif
 
-inline void PWM_ClockEnable()			{ HW::GCLK->PCHCTRL[GCLK_PWM] = PWM_GEN|GCLK_CHEN; HW::MCLK->ClockEnable(PID_PWM); }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-static void Init_PWM()
+static void Init_WaveFormGen()
 {
-	PWM_ClockEnable();
 	GENAB_ClockEnable();
+	DACTC_ClockEnable();
 
-	PIO_DRVEN->DIRSET	= DRVEN;
-	PIO_WF_PWM->DIRSET	= WF_PWM;
-	PIO_PWM->DIRSET		= PWMLA|PWMHA|PWMLB|PWMHB;
-	PIO_POL->DIRSET		= POLWLA|POLWHA|POLWLB|POLWHB;
+	HW::GCLK->PCHCTRL[GCLK_DAC] = GEN_MCK|GCLK_CHEN; 
+	HW::GCLK->PCHCTRL[GCLK_ADC0] = GEN_MCK|GCLK_CHEN; 
+	HW::MCLK->ClockEnable(PID_ADC0); 
+	HW::MCLK->ClockEnable(PID_DAC); 
+
 	PIO_GEN->DIRSET		= GENA|GENB;
-
-	PIO_PWM->SetWRCONFIG(PWMLA, PMUX_PWMLA|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
-	PIO_PWM->SetWRCONFIG(PWMHA, PMUX_PWMHA|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
-	PIO_PWM->SetWRCONFIG(PWMLB, PMUX_PWMLB|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
-	PIO_PWM->SetWRCONFIG(PWMHB, PMUX_PWMHB|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
 
 	PIO_GEN->SetWRCONFIG(GENA, PMUX_GENA|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
 	PIO_GEN->SetWRCONFIG(GENB, PMUX_GENB|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
@@ -1282,9 +1319,9 @@ static void Init_PWM()
 	GENABTC->WAVE = TC_WAVEGEN_NPWM;
 	GENABTC->DRVCTRL = TC_INVEN0 << GENB_WO_NUM;
 
-	GENABTC->PER8 = US2GENAB(10)-1;
-	GENABTC->CC8[GENA_WO_NUM] = US2GENAB(5); 
-	GENABTC->CC8[GENB_WO_NUM] = US2GENAB(5); 
+	GENABTC->PER8 = US2GENAB(40)-1;
+	GENABTC->CC8[GENA_WO_NUM] = US2GENAB(20); 
+	GENABTC->CC8[GENB_WO_NUM] = US2GENAB(20); 
 
 	GENABTC->EVCTRL = 0;
 
@@ -1293,8 +1330,66 @@ static void Init_PWM()
 	GENABTC->CTRLA |= TC_ENABLE;
 	GENABTC->CTRLBSET = TC_CMD_RETRIGGER;
 
-	PIO_WF_PWM->CLR(WF_PWM);
+	PIO_DAC0->SetWRCONFIG(DAC0, PMUX_DAC0|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
+
+	DACTC->CTRLA = DACTC_PRESC_DIV|TC_MODE_COUNT8;
+	DACTC->WAVE = TC_WAVEGEN_NPWM;
+
+	DACTC->PER8 = US2DACTC(10)-1;
+	DACTC->EVCTRL = 0;
+
+	DACTC->INTENCLR = ~0;
+
+	DACTC->CTRLA |= TC_ENABLE;
+	DACTC->CTRLBSET = TC_CMD_RETRIGGER;
+
+	//DACTC_DMA.WritePeripheral(waveBuffer, HW::DAC
+
+	const float pi = 3.14159265358979f;
+	const float k = 2*pi/ArraySize(waveBuffer);
+
+	for (u32 i = 0; i < ArraySize(waveBuffer); i++)
+	{
+		waveBuffer[i] = 32768 + 25220*sin(i*k)*(1-cos(i*k));
+	};
+
+}
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+static void Init_PWM()
+{
+	PWM_ClockEnable();
+
+	PIO_DRVEN->DIRSET	= DRVEN;
+	PIO_WF_PWM->DIRSET	= WF_PWM;
+	PIO_PWM->DIRSET		= PWMLA|PWMHA|PWMLB|PWMHB;
+	PIO_POL->DIRSET		= POLWLA|POLWHA|POLWLB|POLWHB;
+
+	PIO_PWM->SetWRCONFIG(PWMLA, PMUX_PWMLA|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
+	PIO_PWM->SetWRCONFIG(PWMHA, PMUX_PWMHA|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
+	PIO_PWM->SetWRCONFIG(PWMLB, PMUX_PWMLB|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
+	PIO_PWM->SetWRCONFIG(PWMHB, PMUX_PWMHB|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
+
+	PIO_WF_PWM->SET(WF_PWM);
 	PIO_POL->SET(POLWLA|POLWLB);
+
+	PWMTCC->CTRLA = PWM_PRESC_DIV;
+	PWMTCC->WAVE = TCC_WAVEGEN_NPWM|TCC_POL0|TCC_POL3;
+	PWMTCC->DRVCTRL = TCC_NRE0|TCC_NRE1|TCC_NRE2|TCC_NRE3|TCC_NRV0|TCC_NRV2;//(TCC_INVEN0 << PWMHA_WO_NUM)|(TCC_INVEN0 << PWMHB_WO_NUM);
+
+	PWMTCC->PER = US2PWM(500)-1;
+	PWMTCC->CC[PWMLA_WO_NUM] = US2PWM(260); 
+	PWMTCC->CC[PWMHA_WO_NUM] = US2PWM(240); 
+	PWMTCC->CC[PWMLB_WO_NUM] = US2PWM(240); 
+	PWMTCC->CC[PWMHB_WO_NUM] = US2PWM(260); 
+
+	PWMTCC->EVCTRL = 0;
+
+	PWMTCC->INTENCLR = ~0;
+
+	PWMTCC->CTRLA |= TCC_ENABLE;
+	PWMTCC->CTRLBSET = TCC_ONESHOT;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1368,6 +1463,7 @@ void InitHardware()
 	EnableVCORE();
 	
 	Init_PWM();
+	//Init_WaveFormGen();
 
 	WDT_Init();
 
@@ -1384,19 +1480,14 @@ void UpdateHardware()
 {
 #ifndef WIN32
 
-	static byte i = 0;
+	static TM32 tm;
 
-	static Deb db(false, 20);
+	I2C_Update();
 
-	#define CALL(p) case (__LINE__-S): p; break;
-
-	enum C { S = (__LINE__+3) };
-	switch(i++)
+	if (tm.Check(100))
 	{
-		CALL( I2C_Update();		);
+		PWMTCC->CTRLBSET = TCC_CMD_RETRIGGER;
 	};
-
-	i = (i > (__LINE__-S-3)) ? 0 : i;
 
 #endif
 }

@@ -117,17 +117,17 @@
 
 	// ++++++++++++++	DMA	0...31	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	//#define	NAND_DMA			DMA_CH0
-	#define	UART0_DMA			DMA_CH1
+	#define	DACTC_DMA				DMA_CH0
+	#define	UART0_DMA				DMA_CH1
 	//#define	UART2_DMA			DMA_CH2
 	//#define	COM3_DMA			DMA_CH3
 	//#define	SPI_DMACH_TX		DMA_CH4
 	//#define	SPI_DMACH_RX		DMA_CH5
 	//#define	NAND_MEMCOPY_DMA	DMA_CH6
-	#define	I2C_DMACH			DMA_CH7
+	#define	I2C_DMACH				DMA_CH7
 	//#define	DSP_DMATX			DMA_CH8
 	//#define	DSP_DMARX			DMA_CH9
-	#define	CRC_DMA				DMA_CH31
+	#define	CRC_DMA					DMA_CH31
 
 	// ++++++++++++++	EVENT 0...31	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -140,7 +140,7 @@
 	// ++++++++++++++	TC	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	#define	GENAB_TC			TC0
-	//#define					TC1
+	#define	DAC_TC				TC1
 	//#define MANT_TC				TC2
 	#define MANI_TC				TC3
 	//#define 					TC4
@@ -379,9 +379,16 @@
 	#define PIO_PWM				HW::PIOA
 	#define PIO_POL				HW::PIOB
 	#define PIO_GEN				HW::PIOB
+	#define PIO_DAC0			HW::PIOA
+	#define PIO_ADC0_01			HW::PIOA
 
 	#define GENA_WO_NUM			1
 	#define GENB_WO_NUM			0
+
+	#define PWMLA_WO_NUM		0
+	#define PWMHA_WO_NUM		1
+	#define PWMLB_WO_NUM		2
+	#define PWMHB_WO_NUM		3
 
 	#define PIN_DRVEN			0 
 	#define PIN_WF_PWM			1
@@ -395,22 +402,29 @@
 	#define PIN_POLWHB			3
 	#define PIN_GENA			31
 	#define PIN_GENB			30
+	#define PIN_DAC0			2
+	#define PIN_ADC0_01			3
 
-	#define DRVEN				(1<<PIN_DRVEN	) 
-	#define WF_PWM				(1<<PIN_WF_PWM	) 
-	#define PWMLA				(1<<PIN_PWMLA	) 
-	#define PWMHA				(1<<PIN_PWMHA	) 
-	#define PWMLB				(1<<PIN_PWMLB	) 
-	#define PWMHB				(1<<PIN_PWMHB	) 
-	#define POLWLA				(1<<PIN_POLWLA	) 
-	#define POLWHA				(1<<PIN_POLWHA	) 
-	#define POLWLB				(1<<PIN_POLWLB	) 
-	#define POLWHB				(1<<PIN_POLWHB	) 
-	#define GENA				(1<<PIN_GENA	) 
-	#define GENB				(1<<PIN_GENB	) 
+	#define DRVEN				(1UL<<PIN_DRVEN	) 
+	#define WF_PWM				(1UL<<PIN_WF_PWM	) 
+	#define PWMLA				(1UL<<PIN_PWMLA	) 
+	#define PWMHA				(1UL<<PIN_PWMHA	) 
+	#define PWMLB				(1UL<<PIN_PWMLB	) 
+	#define PWMHB				(1UL<<PIN_PWMHB	) 
+	#define POLWLA				(1UL<<PIN_POLWLA	) 
+	#define POLWHA				(1UL<<PIN_POLWHA	) 
+	#define POLWLB				(1UL<<PIN_POLWLB	) 
+	#define POLWHB				(1UL<<PIN_POLWHB	) 
+	#define GENA				(1UL<<PIN_GENA	) 
+	#define GENB				(1UL<<PIN_GENB	) 
+	#define DAC0				(1UL<<PIN_DAC0	) 
+	#define ADC0_01				(1UL<<PIN_ADC0_01	) 
 
 	#define PMUX_GENA			PORT_PMUX_E
 	#define PMUX_GENB			PORT_PMUX_E
+
+	#define PMUX_DAC0			PORT_PMUX_B
+	#define PMUX_ADC0_01		PORT_PMUX_B
 
 	#define PMUX_PWMLA			PORT_PMUX_F
 	#define PMUX_PWMHA			PORT_PMUX_F

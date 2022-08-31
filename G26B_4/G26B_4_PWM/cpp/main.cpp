@@ -96,7 +96,7 @@ static TM32 imModeTimeout;
 static u16 motoRcvCount = 0;
 
 static u16 curFireVoltage = 300;
-static u16 dstFireVoltage = 250;
+static u16 dstFireVoltage = 0;
 
 //static u32 dspMMSEC = 0;
 //static u32 shaftMMSEC = 0;
@@ -1333,7 +1333,7 @@ int main()
 		fc++;
 
 		if (tm.Check(1000))
-		{ 
+		{
 			fps = fc; fc = 0; 
 
 #ifdef WIN32
