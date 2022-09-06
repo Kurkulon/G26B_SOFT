@@ -1312,7 +1312,7 @@ int main()
 
 #ifndef WIN32
 
-	commoto.Connect(ComPort::ASYNC, 1562500, 0, 1);
+//	commoto.Connect(ComPort::ASYNC, 1562500, 0, 1);
 
 #endif
 

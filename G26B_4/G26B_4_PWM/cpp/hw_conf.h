@@ -117,12 +117,12 @@
 
 	// ++++++++++++++	DMA	0...31	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	#define	DACTC_DMA				DMA_CH0
-	#define	UART0_DMA				DMA_CH1
-	//#define	UART2_DMA			DMA_CH2
-	//#define	COM3_DMA			DMA_CH3
-	//#define	SPI_DMACH_TX		DMA_CH4
-	//#define	SPI_DMACH_RX		DMA_CH5
+	#define	PWMLA_DMA				DMA_CH0
+	#define	PWMHA_DMA				DMA_CH1
+	#define	PWMLB_DMA				DMA_CH2
+	#define	PWMHB_DMA				DMA_CH3
+	#define	DACTC_DMA				DMA_CH4
+	#define	UART0_DMA				DMA_CH5
 	//#define	NAND_MEMCOPY_DMA	DMA_CH6
 	#define	I2C_DMACH				DMA_CH7
 	//#define	DSP_DMATX			DMA_CH8
@@ -131,7 +131,7 @@
 
 	// ++++++++++++++	EVENT 0...31	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	//#define EVENT_NAND_1		0
+	#define EVENT_PWM_SYNC		0
 	//#define EVENT_NAND_2		1
 	//#define EVENT_NAND_3		2
 	#define EVENT_MANR_1		3
@@ -139,9 +139,9 @@
 
 	// ++++++++++++++	TC	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	#define	GENAB_TC			TC0
-	#define	DAC_TC				TC1
-	//#define MANT_TC				TC2
+	#define	PWMDMA_TC			TC0
+	#define	PWMCOUNT_TC			TC1
+	//#define MANT_TC			TC2
 	#define MANI_TC				TC3
 	//#define 					TC4
 	//#define 					TC5
@@ -430,6 +430,8 @@
 	#define PMUX_PWMHA			PORT_PMUX_F
 	#define PMUX_PWMLB			PORT_PMUX_F
 	#define PMUX_PWMHB			PORT_PMUX_F
+
+	#define PWM_EXTINT			(PIN_URXD0&15)
 
 
 	// ++++++++++++++	PIO INIT	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
