@@ -80,7 +80,7 @@
 	// 70	- PA20	
 	// 71	- PA21	
 	// 75	- PA25	- main loop
-	// 79	- PB23	
+	// 79	- PB23	- PwmDmaIRQ
 	// 80	- PB24	
 	// 81	- PB25	
 	// 82	- PC24
@@ -132,15 +132,15 @@
 	// ++++++++++++++	EVENT 0...31	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	#define EVENT_PWM_SYNC		0
-	//#define EVENT_NAND_2		1
-	//#define EVENT_NAND_3		2
+	#define EVENT_PWMDMA		1
+	#define EVENT_PWMCOUNT		2
 	#define EVENT_MANR_1		3
 	#define EVENT_MANR_2		4
 
 	// ++++++++++++++	TC	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	#define	PWMDMA_TC			TC0
-	#define	PWMCOUNT_TC			TC1
+	//#define					TC0
+	//#define					TC1
 	//#define MANT_TC			TC2
 	#define MANI_TC				TC3
 	//#define 					TC4
@@ -189,8 +189,8 @@
 
 	#define PWM_TCC				TCC0
 	#define MANR_TCC			TCC1
-	//#define					TCC2
-	//#define					TCC3
+	#define PWMDMA_TCC			TCC2
+	#define PWMCOUNT_TCC		TCC3
 	#define MANT_TCC			TCC4
 
 	#define GEN_TCC0_TCC1		GEN_MCK
@@ -437,8 +437,8 @@
 	// ++++++++++++++	PIO INIT	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	#define PIOA_INIT_DIR		((1<<0)|(1<<1)|(0xFF<<4)|(0xFF<<14)|(1<<25)|(1<<27))
-	#define PIOA_INIT_SET		((1<<1)|(1<<27))
-	#define PIOA_INIT_CLR		((1<<0)|(0xFF<<4)|(0xFF<<14)|(1<<25))
+	#define PIOA_INIT_SET		((1<<0)|(1<<1)|(1<<27))
+	#define PIOA_INIT_CLR		((0xFF<<4)|(0xFF<<14)|(1<<25))
 
 	#define PIOB_INIT_DIR		((0xF<<0)|(0x1FF<<4)|(0x3F<<16)|(7<<23)|(3UL<<30))
 	#define PIOB_INIT_SET		(0)

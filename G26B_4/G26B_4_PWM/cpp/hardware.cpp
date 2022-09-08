@@ -1186,49 +1186,55 @@ int Printf(u32 xx, u32 yy, byte c, const char *format, ... )
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#ifdef PWMDMA_TC
+#ifdef PWMDMA_TCC
 
-	#define PWMDMATC					HW::PWMDMA_TC
-	#define PWMDMA_GEN					CONCAT2(GEN_,PWMDMA_TC)
-	#define PWMDMA_GEN_CLK				CONCAT2(CLK_,PWMDMA_TC) 
-	#define PWMDMA_IRQ					CONCAT2(PWMDMA_TC,_IRQ)
-	#define GCLK_PWMDMA					CONCAT2(GCLK_,PWMDMA_TC)
-	#define PID_PWMDMA					CONCAT2(PID_,PWMDMA_TC)
+	#define PWMDMATCC					HW::PWMDMA_TCC
+	#define PWMDMA_GEN					CONCAT2(GEN_,PWMDMA_TCC)
+	#define PWMDMA_GEN_CLK				CONCAT2(CLK_,PWMDMA_TCC) 
+	#define PWMDMA_IRQ					CONCAT2(PWMDMA_TCC,_0_IRQ)
+	#define GCLK_PWMDMA					CONCAT2(GCLK_,PWMDMA_TCC)
+	#define PID_PWMDMA					CONCAT2(PID_,PWMDMA_TCC)
 
 	#if (PWMDMA_GEN_CLK > 100000000)
-			#define PWMDMA_PRESC_NUM	64
+			#define PWMDMA_PRESC_NUM	1
 	#elif (PWMDMA_GEN_CLK > 50000000)
-			#define PWMDMA_PRESC_NUM	8
+			#define PWMDMA_PRESC_NUM	1
 	#elif (PWMDMA_GEN_CLK > 20000000)
-			#define PWMDMA_PRESC_NUM	4
+			#define PWMDMA_PRESC_NUM	1
 	#elif (PWMDMA_GEN_CLK > 10000000)
-			#define PWMDMA_PRESC_NUM	2
+			#define PWMDMA_PRESC_NUM	1
 	#elif (PWMDMA_GEN_CLK > 5000000)
 			#define PWMDMA_PRESC_NUM	1
 	#else
 			#define PWMDMA_PRESC_NUM	1
 	#endif
 
-	#define PWMDMA_PRESC_DIV			CONCAT2(TC_PRESCALER_DIV,PWMDMA_PRESC_NUM)
+	#define PWMDMA_PRESC_DIV			CONCAT2(TCC_PRESCALER_DIV,PWMDMA_PRESC_NUM)
 	#define US2PWMDMA(v)				(((v)*(PWMDMA_GEN_CLK/PWMDMA_PRESC_NUM/1000)+500)/1000)
+
+	#define PWMDMA0_EVSYS_USER			CONCAT3(EVSYS_USER_, PWMDMA_TCC, _EV_0)
+	#define PWMDMA1_EVSYS_USER			CONCAT3(EVSYS_USER_, PWMDMA_TCC, _EV_1)
+	#define PWMDMA_EVENT_GEN			CONCAT3(EVGEN_, PWMDMA_TCC, _OVF)
+
+	#define PWMDMA_DMCH_TRIGSRC			CONCAT3(DMCH_TRIGSRC_, PWMDMA_TCC, _OVF)
 
 	inline void PWMDMA_ClockEnable()	{ HW::GCLK->PCHCTRL[GCLK_PWMDMA] = PWMDMA_GEN|GCLK_CHEN; HW::MCLK->ClockEnable(PID_PWMDMA); }
 
 #else
-	#error  Must defined PWMDMA_TC
+	#error  Must defined PWMDMA_TCC
 #endif
 
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#ifdef PWMCOUNT_TC
+#ifdef PWMCOUNT_TCC
 
-	#define PWMCOUNTTC					HW::PWMCOUNT_TC
-	#define PWMCOUNT_GEN				CONCAT2(GEN_,PWMCOUNT_TC)
-	#define PWMCOUNT_GEN_CLK			CONCAT2(CLK_,PWMCOUNT_TC) 
-	#define PWMCOUNT_IRQ				CONCAT2(PWMCOUNT_TC,_IRQ)
-	#define GCLK_PWMCOUNT				CONCAT2(GCLK_,PWMCOUNT_TC)
-	#define PID_PWMCOUNT				CONCAT2(PID_,PWMCOUNT_TC)
+	#define PWMCOUNTTCC					HW::PWMCOUNT_TCC
+	#define PWMCOUNT_GEN				CONCAT2(GEN_,PWMCOUNT_TCC)
+	#define PWMCOUNT_GEN_CLK			CONCAT2(CLK_,PWMCOUNT_TCC) 
+	#define PWMCOUNT_IRQ				CONCAT2(PWMCOUNT_TCC,_0_IRQ)
+	#define GCLK_PWMCOUNT				CONCAT2(GCLK_,PWMCOUNT_TCC)
+	#define PID_PWMCOUNT				CONCAT2(PID_,PWMCOUNT_TCC)
 
 	#if (PWMCOUNT_GEN_CLK > 100000000)
 			#define PWMCOUNT_PRESC_NUM	1
@@ -1244,13 +1250,17 @@ int Printf(u32 xx, u32 yy, byte c, const char *format, ... )
 			#define PWMCOUNT_PRESC_NUM	1
 	#endif
 
-	#define PWMCOUNT_PRESC_DIV			CONCAT2(TC_PRESCALER_DIV,PWMCOUNT_PRESC_NUM)
+	#define PWMCOUNT_PRESC_DIV			CONCAT2(TCC_PRESCALER_DIV,PWMCOUNT_PRESC_NUM)
 	#define US2PWMCOUNT(v)				(((v)*(PWMCOUNT_GEN_CLK/PWMCOUNT_PRESC_NUM)+500000)/1000000)
+
+	//#define PWMCOUNT_EVENT_GEN			CONCAT3(EVGEN_, PWMCOUNT_TCC, _OVF)
+	#define PWMCOUNT0_EVSYS_USER		CONCAT3(EVSYS_USER_, PWMCOUNT_TCC, _EV_0)
+	#define PWMCOUNT1_EVSYS_USER		CONCAT3(EVSYS_USER_, PWMCOUNT_TCC, _EV_1)
 
 	inline void PWMCOUNT_ClockEnable()	{ HW::GCLK->PCHCTRL[GCLK_PWMCOUNT] = PWMCOUNT_GEN|GCLK_CHEN; HW::MCLK->ClockEnable(PID_PWMCOUNT); }
 
 #else
-	#error  Must defined PWMCOUNT_TC
+	#error  Must defined PWMCOUNT_TCC
 #endif
 
 
@@ -1291,12 +1301,74 @@ int Printf(u32 xx, u32 yy, byte c, const char *format, ... )
 	#define PWMLB_CC_NUM				(PWMLB_WO_NUM % PWM_CC_NUM)
 	#define PWMHB_CC_NUM				(PWMHB_WO_NUM % PWM_CC_NUM)
 
+	#define PWM_DMCH_TRIGSRC			CONCAT3(DMCH_TRIGSRC_, PWM_TCC, _OVF)
+
 	inline void PWM_ClockEnable()		{ HW::GCLK->PCHCTRL[GCLK_PWM] = PWM_GEN|GCLK_CHEN; HW::MCLK->ClockEnable(PID_PWM); }
 
 #else
 	#error  Must defined PWM_TCC
 #endif
 
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+static u32 pwmStopTime = 0;
+static u16 *ppwmdata = waveBuffer;
+static bool pwmstat = true;
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#pragma push
+#pragma O3
+#pragma Otime
+
+static __irq void PwmCountIRQ()
+{
+	PIO_DRVEN->SET(DRVEN);
+	PWMDMATCC->CTRLBSET = TCC_CMD_STOP;
+	PWMTCC->CTRLBSET = TCC_CMD_STOP;
+	pwmStopTime = GetMilliseconds();
+	PWMCOUNTTCC->INTFLAG = ~0;
+	pwmstat = true;
+}
+
+static __irq void PwmDmaIRQ()
+{
+	HW::PIOB->BSET(23);
+//	if (PWMDMATCC->INTFLAG & TCC_OVF)
+	{
+		u16 t = *(ppwmdata++);
+		PWMTCC->CCBUF[0] = t;
+		PWMTCC->CCBUF[1] = t;
+		PWMTCC->CCBUF[2] = t;
+		PWMTCC->CCBUF[3] = t;
+		PWMTCC->INTFLAG = ~0;//TCC_OVF;
+	};
+
+	HW::PIOB->BCLR(23);
+}
+
+#pragma pop
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+static void Update_PWM()
+{
+
+	if (pwmstat)
+	{
+		u32 t = GetMilliseconds();
+
+		if ((u32)(t - pwmStopTime) > 50)
+		{
+			pwmstat = false;
+			ppwmdata = waveBuffer; 
+			PIO_DRVEN->CLR(DRVEN);
+			PWMTCC->PERBUF = US2PWM(10);
+			//PWMLA_DMA.WritePeripheral(waveBuffer, &(PWMTCC->CCBUF[PWMLA_WO_NUM]), 50, DMCH_TRIGACT_BURST|PWMDMA_DMCH_TRIGSRC, DMDSC_BEATSIZE_HWORD); 
+			//PWMHA_DMA.WritePeripheral(waveBuffer, &(PWMTCC->CCBUF[PWMHA_WO_NUM]), 10, DMCH_TRIGACT_BURST|PWMDMA_DMCH_TRIGSRC, DMDSC_BEATSIZE_HWORD); 
+			//PWMLB_DMA.WritePeripheral(waveBuffer, &(PWMTCC->CCBUF[PWMLB_WO_NUM]), 10, DMCH_TRIGACT_BURST|PWMDMA_DMCH_TRIGSRC, DMDSC_BEATSIZE_HWORD); 
+			//PWMHB_DMA.WritePeripheral(waveBuffer, &(PWMTCC->CCBUF[PWMHB_WO_NUM]), 10, DMCH_TRIGACT_BURST|PWMDMA_DMCH_TRIGSRC, DMDSC_BEATSIZE_HWORD); 
+		};
+	};
+}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1306,6 +1378,7 @@ static void Init_PWM()
 	PWMDMA_ClockEnable();
 	PWMCOUNT_ClockEnable();
 
+	PIO_DRVEN->SET(DRVEN);
 	PIO_DRVEN->DIRSET	= DRVEN;
 	PIO_WF_PWM->DIRSET	= WF_PWM;
 	PIO_PWM->DIRSET		= PWMLA|PWMHA|PWMLB|PWMHB;
@@ -1323,19 +1396,22 @@ static void Init_PWM()
 	PWMTCC->WAVE = TCC_WAVEGEN_NPWM|TCC_POL0|TCC_POL3;
 	PWMTCC->DRVCTRL = TCC_NRE0|TCC_NRE1|TCC_NRE2|TCC_NRE3|TCC_NRV0|TCC_NRV2;//(TCC_INVEN0 << PWMHA_WO_NUM)|(TCC_INVEN0 << PWMHB_WO_NUM);
 	PWMTCC->WEXCTRL = 0;
-	PWMTCC->PER = US2PWM(100)-1;
-	PWMTCC->CC[PWMLA_WO_NUM] = US2PWM(50); 
-	PWMTCC->CC[PWMHA_WO_NUM] = US2PWM(50); 
-	PWMTCC->CC[PWMLB_WO_NUM] = US2PWM(50); 
-	PWMTCC->CC[PWMHB_WO_NUM] = US2PWM(50); 
-	PWMTCC->EVCTRL = TCC_TCEI0|TCC_EVACT0_RETRIGGER;
+	PWMTCC->PER = US2PWM(10)-1;
+	PWMTCC->CCBUF[PWMLA_WO_NUM] = US2PWM(5); 
+	PWMTCC->CCBUF[PWMHA_WO_NUM] = US2PWM(5); 
+	PWMTCC->CCBUF[PWMLB_WO_NUM] = US2PWM(5); 
+	PWMTCC->CCBUF[PWMHB_WO_NUM] = US2PWM(5); 
+	PWMTCC->EVCTRL = TCC_OVFEO|TCC_TCEI0|TCC_EVACT0_RETRIGGER;
 	PWMTCC->INTENCLR = ~0;
+	PWMTCC->INTENSET = TCC_OVF;
 	PWMTCC->CTRLA |= TCC_ENABLE;
-	PWMTCC->CTRLBSET = TCC_ONESHOT;
+	//PWMTCC->CTRLBSET = TCC_ONESHOT;
 
 	PIO_URXD0->SetWRCONFIG(URXD0, PORT_PMUX_A|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN); 
 
 	HW::GCLK->PCHCTRL[EVENT_PWM_SYNC+GCLK_EVSYS0] = GCLK_GEN(GEN_MCK)|GCLK_CHEN;
+	HW::GCLK->PCHCTRL[EVENT_PWMDMA+GCLK_EVSYS0] = GCLK_GEN(GEN_MCK)|GCLK_CHEN;
+	//HW::GCLK->PCHCTRL[EVENT_PWMCOUNT+GCLK_EVSYS0] = GCLK_GEN(GEN_MCK)|GCLK_CHEN;
 
 	HW::EIC->CTRLA = 0; while(HW::EIC->SYNCBUSY);
 
@@ -1347,30 +1423,54 @@ static void Init_PWM()
 	HW::EVSYS->CH[EVENT_PWM_SYNC].CHANNEL = (EVGEN_EIC_EXTINT_0+PWM_EXTINT)|EVSYS_PATH_ASYNCHRONOUS;
 	HW::EVSYS->USER[PWM_EVSYS_USER] = EVENT_PWM_SYNC+1;
 
-	PWMDMATC->CTRLA = PWMDMA_PRESC_DIV|TC_MODE_COUNT16;
-	PWMDMATC->WAVE = TC_WAVEGEN_MPWM;
-	PWMDMATC->CC16[0] = US2PWMDMA(10)-1;
-	PWMDMATC->EVCTRL = TC_OVFEO;
-	PWMDMATC->INTENCLR = ~0;
-	PWMDMATC->CTRLA |= TC_ENABLE;
+	PWMDMATCC->CTRLA = PWMDMA_PRESC_DIV;
+	PWMDMATCC->WAVE = TCC_WAVEGEN_NPWM;
+	PWMDMATCC->PER = US2PWMDMA(10)-1;
+	PWMDMATCC->CC[0] = US2PWMDMA(1);
+	PWMDMATCC->DRVCTRL = TCC_NRE0;
+	PWMDMATCC->EVCTRL = TCC_OVFEO|TCC_TCEI0|TCC_EVACT0_RETRIGGER;
+	PWMDMATCC->INTENCLR = ~0;
+	//PWMDMATCC->INTENSET = TCC_OVF;
+	PWMDMATCC->CTRLA |= TCC_ENABLE;
 	//PWMDMATC->CTRLBSET = TC_CMD_RETRIGGER;
 
-	PWMCOUNTTC->CTRLA = PWMCOUNT_PRESC_DIV|TC_MODE_COUNT16;
-	PWMCOUNTTC->WAVE = TC_WAVEGEN_MPWM;
-	PWMCOUNTTC->CC16[0] = sizeof(waveBuffer);
-	PWMCOUNTTC->EVCTRL = 0;
-	PWMCOUNTTC->INTENCLR = ~0;
-	PWMCOUNTTC->CTRLA |= TC_ENABLE;
-	PWMCOUNTTC->CTRLBSET = TC_ONESHOT;
+	VectorTableExt[PWM_IRQ] = PwmDmaIRQ;
+	CM4::NVIC->CLR_PR(PWM_IRQ);
+	CM4::NVIC->SET_ER(PWM_IRQ);
+
+	HW::EVSYS->CH[EVENT_PWMDMA].CHANNEL = PWMDMA_EVENT_GEN|EVSYS_PATH_ASYNCHRONOUS;
+	HW::EVSYS->USER[PWMDMA0_EVSYS_USER] = EVENT_PWM_SYNC+1;
+	HW::EVSYS->USER[PWMDMA1_EVSYS_USER] = EVENT_PWMCOUNT+1;
+
+	PWMCOUNTTCC->CTRLA = PWMCOUNT_PRESC_DIV;
+	PWMCOUNTTCC->WAVE = TCC_WAVEGEN_NPWM;
+	PWMCOUNTTCC->PER = ArraySize(waveBuffer);
+	PWMCOUNTTCC->CC[0] = ArraySize(waveBuffer);
+	PWMCOUNTTCC->EVCTRL = TCC_TCEI0|TCC_EVACT0_COUNT|TCC_TCEI1|TCC_EVACT1_RETRIGGER;
+	PWMCOUNTTCC->INTENCLR = ~0;
+	PWMCOUNTTCC->INTENSET = TCC_OVF;
+	PWMCOUNTTCC->CTRLA |= TCC_ENABLE;
+	PWMCOUNTTCC->CTRLBSET = TCC_ONESHOT;
+
+	//HW::EVSYS->CH[EVENT_PWMCOUNT].CHANNEL = PWMCOUNT_EVENT_GEN|EVSYS_PATH_ASYNCHRONOUS;
+	HW::EVSYS->USER[PWMCOUNT0_EVSYS_USER] = EVENT_PWMDMA+1;
+	HW::EVSYS->USER[PWMCOUNT1_EVSYS_USER] = EVENT_PWM_SYNC+1;
+
+	VectorTableExt[PWMCOUNT_IRQ] = PwmCountIRQ;
+	CM4::NVIC->CLR_PR(PWMCOUNT_IRQ);
+	CM4::NVIC->SET_ER(PWMCOUNT_IRQ);
+
+	HW::PIOA->SetWRCONFIG(1<<14,  PORT_PMUX_F|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN); // PWMDMATCC WO[0]
+	HW::PIOB->SetWRCONFIG(1<<16,  PORT_PMUX_F|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN); // PWMCOUNTTCC WO[0]
 
 	//DACTC_DMA.WritePeripheral(waveBuffer, HW::DAC
 
 	const float pi = 3.14159265358979f;
 	const float k = 2*pi/ArraySize(waveBuffer);
-	const u16 hi = US2PWM(18);
-	const u16 mid = US2PWM(10);
-	const u16 lo = US2PWM(2);
-	const u16 amp = US2PWM(20);
+	const u16 hi = US2PWM(9);
+	const u16 mid = US2PWM(5);
+	const u16 lo = US2PWM(1);
+	const u16 amp = US2PWM(9);
 
 	for (u32 i = 0; i < ArraySize(waveBuffer); i++)
 	{
@@ -1380,6 +1480,63 @@ static void Init_PWM()
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+static void Init_HV()
+{
+	static DSCI2C dsc;
+	static byte wbuf[4];
+	static TM32 tm;
+
+	wbuf[0] = 3;	
+	wbuf[1] = 1;	
+	wbuf[2] = 0;	
+
+	dsc.adr = 0x48;
+	dsc.wdata = wbuf;
+	dsc.wlen = 3;
+	dsc.rdata = 0;
+	dsc.rlen = 0;
+	dsc.wdata2 = 0;
+	dsc.wlen2 = 0;
+
+	I2C_AddRequest(&dsc);
+
+	tm.Reset();	while (!dsc.ready && !tm.Check(10)) I2C_Update();
+
+	wbuf[0] = 4;	
+	wbuf[1] = 1;	
+	wbuf[2] = 1;	
+
+	dsc.adr = 0x48;
+	dsc.wdata = wbuf;
+	dsc.wlen = 3;
+	dsc.rdata = 0;
+	dsc.rlen = 0;
+	dsc.wdata2 = 0;
+	dsc.wlen2 = 0;
+
+	I2C_AddRequest(&dsc);
+
+	tm.Reset();	while (!dsc.ready && !tm.Check(10)) I2C_Update();
+
+	wbuf[0] = 8;	
+	wbuf[1] = ~0;
+	wbuf[2] = ~0;
+
+	dsc.adr = 0x48;
+	dsc.wdata = wbuf;
+	dsc.wlen = 3;
+	dsc.rdata = 0;
+	dsc.rlen = 0;
+	dsc.wdata2 = 0;
+	dsc.wlen2 = 0;
+
+	I2C_AddRequest(&dsc);
+
+	tm.Reset();	while (!dsc.ready && !tm.Check(10)) I2C_Update();
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 void InitHardware()
 {
@@ -1438,8 +1595,10 @@ void InitHardware()
 #endif
 
 	Init_time(MCK);
-	RTT_Init();
 	I2C_Init();
+	Init_HV();
+
+	RTT_Init();
 
 #ifndef WIN32
 
@@ -1470,11 +1629,12 @@ void UpdateHardware()
 	static TM32 tm;
 
 	I2C_Update();
+	Update_PWM();
 
-	//if (tm.Check(1000))
-	//{
-	//	PWMTCC->CTRLBSET = TCC_CMD_RETRIGGER;
-	//};
+	if (tm.Check(500))
+	{
+		HW::EVSYS->SWEVT = 1UL<<EVENT_PWM_SYNC;
+	};
 
 #endif
 }
