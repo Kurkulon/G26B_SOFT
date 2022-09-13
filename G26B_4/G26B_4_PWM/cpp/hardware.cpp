@@ -97,7 +97,7 @@ volatile u16 curShaftCounter = 0;
 
 static bool busy_CRC_CCITT_DMA = false;
 
-u16 waveBuffer[50] = {0};
+u16 waveBuffer[100] = {0};
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1322,7 +1322,7 @@ static bool pwmstat = true;
 
 static __irq void PwmCountIRQ()
 {
-	PIO_DRVEN->SET(DRVEN);
+	PIO_DRVEN->CLR(DRVEN);
 	PWMDMATCC->CTRLBSET = TCC_CMD_STOP;
 	PWMTCC->CTRLBSET = TCC_CMD_STOP;
 	pwmStopTime = GetMilliseconds();
@@ -1467,10 +1467,10 @@ static void Init_PWM()
 
 	const float pi = 3.14159265358979f;
 	const float k = 2*pi/ArraySize(waveBuffer);
-	const u16 hi = US2PWM(9);
+	const u16 hi = US2PWM(9.5);
 	const u16 mid = US2PWM(5);
-	const u16 lo = US2PWM(1);
-	const u16 amp = US2PWM(9);
+	const u16 lo = US2PWM(0.5);
+	const u16 amp = US2PWM(10);
 
 	for (u32 i = 0; i < ArraySize(waveBuffer); i++)
 	{
@@ -1596,7 +1596,7 @@ void InitHardware()
 
 	Init_time(MCK);
 	I2C_Init();
-	Init_HV();
+	//Init_HV();
 
 	RTT_Init();
 
@@ -1631,7 +1631,7 @@ void UpdateHardware()
 	I2C_Update();
 	Update_PWM();
 
-	if (tm.Check(500))
+	if (tm.Check(1000))
 	{
 		HW::EVSYS->SWEVT = 1UL<<EVENT_PWM_SYNC;
 	};
