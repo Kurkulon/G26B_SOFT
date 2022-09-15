@@ -95,8 +95,8 @@ static TM32 imModeTimeout;
 
 static u16 motoRcvCount = 0;
 
-static u16 curFireVoltage = 300;
-static u16 dstFireVoltage = 75;
+u16 curFireVoltage = 300;
+u16 dstFireVoltage = 300;
 
 //static u32 dspMMSEC = 0;
 //static u32 shaftMMSEC = 0;
@@ -1040,9 +1040,9 @@ static void UpdateHV()
 
 				t = (k*t+128) >> 10;
 
-				if (t > 100) t = 100;
+				if (t > 344) t = 344;
 
-				t = ~(((u32)t * (65535*16384/100)) / 16384); 
+				t = ~(((u32)t * (65535*16384/344)) / 16384); 
 
 				wbuf[0] = 8;	
 				wbuf[1] = t>>8;

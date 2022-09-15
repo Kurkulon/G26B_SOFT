@@ -97,7 +97,14 @@ volatile u16 curShaftCounter = 0;
 
 static bool busy_CRC_CCITT_DMA = false;
 
-u16 waveBuffer[100] = {0};
+const float pi = 3.14159265358979f;
+extern u16 curFireVoltage;
+u16 waveBuffer[1000] = {0};
+
+#define pwmPeriodUS 6
+u16 waveAmp = 200;
+u16 waveFreq = 3000; //Hz
+u16 waveLen = 50;
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1361,11 +1368,30 @@ static void Update_PWM()
 			pwmstat = false;
 			ppwmdata = waveBuffer; 
 			PIO_DRVEN->CLR(DRVEN);
-			PWMTCC->PERBUF = US2PWM(10);
+			PWMTCC->PERBUF = US2PWM(pwmPeriodUS);
 			//PWMLA_DMA.WritePeripheral(waveBuffer, &(PWMTCC->CCBUF[PWMLA_WO_NUM]), 50, DMCH_TRIGACT_BURST|PWMDMA_DMCH_TRIGSRC, DMDSC_BEATSIZE_HWORD); 
 			//PWMHA_DMA.WritePeripheral(waveBuffer, &(PWMTCC->CCBUF[PWMHA_WO_NUM]), 10, DMCH_TRIGACT_BURST|PWMDMA_DMCH_TRIGSRC, DMDSC_BEATSIZE_HWORD); 
 			//PWMLB_DMA.WritePeripheral(waveBuffer, &(PWMTCC->CCBUF[PWMLB_WO_NUM]), 10, DMCH_TRIGACT_BURST|PWMDMA_DMCH_TRIGSRC, DMDSC_BEATSIZE_HWORD); 
 			//PWMHB_DMA.WritePeripheral(waveBuffer, &(PWMTCC->CCBUF[PWMHB_WO_NUM]), 10, DMCH_TRIGACT_BURST|PWMDMA_DMCH_TRIGSRC, DMDSC_BEATSIZE_HWORD); 
+
+			waveLen = ((1000000 + waveFreq/2) / waveFreq + pwmPeriodUS/2) / pwmPeriodUS;
+
+			PWMCOUNTTCC->PER = waveLen;
+			PWMCOUNTTCC->CC[0] = waveLen;
+
+			const float k = 2*pi/waveLen;
+			const u16 hi = US2PWM(pwmPeriodUS-0.5);
+			const u16 mid = US2PWM(pwmPeriodUS/2);
+			const u16 lo = US2PWM(0.5);
+			const u16 FV = MAX(curFireVoltage, 25);
+			const u16 amp = (((u32)waveAmp*US2PWM(pwmPeriodUS)+FV/2)/FV+1)/2;
+
+			for (u32 i = 0; i < waveLen; i++)
+			{
+				u16 t = mid + amp*sin(i*k);		
+				//u16 t = mid + amp*sin(i*k)*(1-cos(i*k));
+				waveBuffer[i] = LIM(t, lo, hi);
+			};
 		};
 	};
 }
@@ -1396,15 +1422,15 @@ static void Init_PWM()
 	PWMTCC->WAVE = TCC_WAVEGEN_NPWM|TCC_POL0|TCC_POL3;
 	PWMTCC->DRVCTRL = TCC_NRE0|TCC_NRE1|TCC_NRE2|TCC_NRE3|TCC_NRV0|TCC_NRV2;//(TCC_INVEN0 << PWMHA_WO_NUM)|(TCC_INVEN0 << PWMHB_WO_NUM);
 	PWMTCC->WEXCTRL = 0;
-	PWMTCC->PER = US2PWM(10)-1;
-	PWMTCC->CCBUF[PWMLA_WO_NUM] = US2PWM(5); 
-	PWMTCC->CCBUF[PWMHA_WO_NUM] = US2PWM(5); 
-	PWMTCC->CCBUF[PWMLB_WO_NUM] = US2PWM(5); 
-	PWMTCC->CCBUF[PWMHB_WO_NUM] = US2PWM(5); 
+	PWMTCC->PER = US2PWM(pwmPeriodUS)-1;
+	PWMTCC->CCBUF[PWMLA_WO_NUM] = US2PWM(pwmPeriodUS/2); 
+	PWMTCC->CCBUF[PWMHA_WO_NUM] = US2PWM(pwmPeriodUS/2); 
+	PWMTCC->CCBUF[PWMLB_WO_NUM] = US2PWM(pwmPeriodUS/2); 
+	PWMTCC->CCBUF[PWMHB_WO_NUM] = US2PWM(pwmPeriodUS/2); 
 	PWMTCC->EVCTRL = TCC_OVFEO|TCC_TCEI0|TCC_EVACT0_RETRIGGER;
 	PWMTCC->INTENCLR = ~0;
 	PWMTCC->INTENSET = TCC_OVF;
-	PWMTCC->CTRLA |= TCC_ENABLE;
+//	PWMTCC->CTRLA |= TCC_ENABLE;
 	//PWMTCC->CTRLBSET = TCC_ONESHOT;
 
 	PIO_URXD0->SetWRCONFIG(URXD0, PORT_PMUX_A|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN); 
@@ -1425,7 +1451,7 @@ static void Init_PWM()
 
 	PWMDMATCC->CTRLA = PWMDMA_PRESC_DIV;
 	PWMDMATCC->WAVE = TCC_WAVEGEN_NPWM;
-	PWMDMATCC->PER = US2PWMDMA(10)-1;
+	PWMDMATCC->PER = US2PWMDMA(pwmPeriodUS)-1;
 	PWMDMATCC->CC[0] = US2PWMDMA(1);
 	PWMDMATCC->DRVCTRL = TCC_NRE0;
 	PWMDMATCC->EVCTRL = TCC_OVFEO|TCC_TCEI0|TCC_EVACT0_RETRIGGER;
@@ -1444,8 +1470,8 @@ static void Init_PWM()
 
 	PWMCOUNTTCC->CTRLA = PWMCOUNT_PRESC_DIV;
 	PWMCOUNTTCC->WAVE = TCC_WAVEGEN_NPWM;
-	PWMCOUNTTCC->PER = ArraySize(waveBuffer);
-	PWMCOUNTTCC->CC[0] = ArraySize(waveBuffer);
+	PWMCOUNTTCC->PER = waveLen;
+	PWMCOUNTTCC->CC[0] = waveLen;
 	PWMCOUNTTCC->EVCTRL = TCC_TCEI0|TCC_EVACT0_COUNT|TCC_TCEI1|TCC_EVACT1_RETRIGGER;
 	PWMCOUNTTCC->INTENCLR = ~0;
 	PWMCOUNTTCC->INTENSET = TCC_OVF;
@@ -1465,16 +1491,16 @@ static void Init_PWM()
 
 	//DACTC_DMA.WritePeripheral(waveBuffer, HW::DAC
 
-	const float pi = 3.14159265358979f;
-	const float k = 2*pi/ArraySize(waveBuffer);
-	const u16 hi = US2PWM(9.5);
-	const u16 mid = US2PWM(5);
+	const float k = 2*pi/waveLen;
+	const u16 hi = US2PWM(pwmPeriodUS-0.5);
+	const u16 mid = US2PWM(pwmPeriodUS/2);
 	const u16 lo = US2PWM(0.5);
-	const u16 amp = US2PWM(10);
+	const u16 amp = US2PWM(pwmPeriodUS);
 
-	for (u32 i = 0; i < ArraySize(waveBuffer); i++)
+	for (u32 i = 0; i < waveLen; i++)
 	{
-		u16 t = mid + (amp*0.375f)*sin(i*k)*(1-cos(i*k));
+		//u16 t = mid + (amp*0.375f)*sin(i*k)*(1-cos(i*k));
+		u16 t = mid + (amp*0.5f)*sin(i*k);
 		waveBuffer[i] = LIM(t, lo, hi);
 	};
 }
@@ -1631,9 +1657,10 @@ void UpdateHardware()
 	I2C_Update();
 	Update_PWM();
 
-	if (tm.Check(1000))
+	if (tm.Check(3000))
 	{
-		HW::EVSYS->SWEVT = 1UL<<EVENT_PWM_SYNC;
+		//HW::EVSYS->SWEVT = 1UL<<EVENT_PWM_SYNC;
+		PWMTCC->CTRLA |= TCC_ENABLE;
 	};
 
 #endif
