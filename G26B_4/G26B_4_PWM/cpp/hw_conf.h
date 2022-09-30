@@ -355,8 +355,8 @@
 	#define PIO_URXD0			HW::PIOA 
 	#define PIO_RTS0			HW::PIOA 
 
-	#define PMUX_UTXD0			PORT_PMUX_D
-	#define PMUX_URXD0			PORT_PMUX_D 
+	#define PMUX_UTXD0			PORT_PMUX_C
+	#define PMUX_URXD0			PORT_PMUX_C 
 
 	#define UART0_TXPO			USART_TXPO_0 
 	#define UART0_RXPO			USART_RXPO_1 
