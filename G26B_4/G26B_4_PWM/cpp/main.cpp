@@ -296,11 +296,11 @@ static bool RequestMan_10(u16 *data, u16 len, MTB* mtb)
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-static u32 InitRspMan_20(__packed u16 *data)
+static u32 InitRspMan_20(u16 *req, __packed u16 *data)
 {
 	__packed u16 *start = data;
 
-	*(data++)	= manReqWord|0x20;		//1. ответное слово
+	*(data++)	= req[0];				//1. ответное слово
 	*(data++)	= 0;					//2-3. счётчик срабатываний
 	*(data++)	= 0;					//2-3. счётчик срабатываний
 	*(data++)	= 0;					//4. Температура в приборе(0.1гр) (short)
@@ -319,7 +319,7 @@ static bool RequestMan_20(u16 *data, u16 len, MTB* mtb)
 {
 	if (data == 0 || len == 0 || len > 2 || mtb == 0) return false;
 
-	len = InitRspMan_20(manTrmData);
+	len = InitRspMan_20(data, manTrmData);
 
 	mtb->data1 = manTrmData;
 	mtb->len1 = len;
