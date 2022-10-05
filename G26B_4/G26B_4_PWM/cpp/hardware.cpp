@@ -90,7 +90,7 @@ u16 waveBuffer[1000] = {0};
 
 #define pwmPeriodUS 6
 //u16 waveAmp = 0;
-u16 waveFreq = 3000; //Hz
+//u16 waveFreq = 3000; //Hz
 u16 waveLen = 50;
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -722,9 +722,9 @@ static void WDT_Init()
 
 	#ifdef CPU_SAME53	
 
-		//HW::MCLK->APBAMASK |= APBA_WDT;
+		HW::MCLK->APBAMASK |= APBA_WDT;
 
-		//HW::WDT->CONFIG = WDT_WINDOW_CYC512|WDT_PER_CYC1024;
+		HW::WDT->CONFIG = WDT_WINDOW_CYC512|WDT_PER_CYC1024;
 	
 		#ifndef _DEBUG
 		HW::WDT->CTRLA = WDT_ENABLE;
@@ -1326,6 +1326,7 @@ bool IsFireOK()
 
 void DisableFire()
 {
+	HW::EVSYS->CH[EVENT_PWM_SYNC].CHANNEL = EVGEN_NONE;
 	PIO_URXD0->SetWRCONFIG(URXD0, PMUX_URXD0|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN); 
 	PWMTCC->CTRLA &= ~TCC_ENABLE;
 }
@@ -1364,7 +1365,7 @@ static __irq void PwmDmaIRQ()
 #pragma pop
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-void PrepareFire(u16 waveAmp)
+void PrepareFire(u16 waveFreq, u16 waveAmp)
 {
 	pwmstat = false;
 	ppwmdata = waveBuffer; 
@@ -1379,6 +1380,8 @@ void PrepareFire(u16 waveAmp)
 
 	PWMCOUNTTCC->PER = waveLen;
 	PWMCOUNTTCC->CC[0] = waveLen;
+
+	waveAmp /= 8;
 
 	const float k = 2*pi/waveLen;
 	const u16 hi = US2PWM(pwmPeriodUS-0.5);
@@ -1397,6 +1400,7 @@ void PrepareFire(u16 waveAmp)
 	PWMTCC->CTRLA |= TCC_ENABLE;
 
 	PIO_URXD0->SetWRCONFIG(URXD0, PORT_PMUX_A|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN); 
+	HW::EVSYS->CH[EVENT_PWM_SYNC].CHANNEL = (EVGEN_EIC_EXTINT_0+PWM_EXTINT)|EVSYS_PATH_ASYNCHRONOUS;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

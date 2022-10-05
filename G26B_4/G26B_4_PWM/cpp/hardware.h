@@ -33,7 +33,7 @@
 
 
 extern void UpdateHardware();
-extern void PrepareFire(u16 waveAmp);
+extern void PrepareFire(u16 waveFreq, u16 waveAmp);
 
 extern u16 CRC_CCITT_PIO(const void *data, u32 len, u16 init = ~0);
 extern u16 CRC_CCITT_DMA(const void *data, u32 len, u16 init = ~0);

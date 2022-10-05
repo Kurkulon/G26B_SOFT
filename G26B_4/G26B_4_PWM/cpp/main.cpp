@@ -574,7 +574,7 @@ static void UpdateCom()
 
 		case 3:
 
-			PrepareFire(mv.fireAmp/8);
+			PrepareFire(mv.freq, mv.fireAmp);
 
 			i++;
 
