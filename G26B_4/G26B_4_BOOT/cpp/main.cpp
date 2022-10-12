@@ -1,22 +1,17 @@
 #include <string.h>
-#include "core.h"
-//#include "xtrap.h"
-//#include "flash.h"
-#include "time.h"
-//#include "ComPort.h"
-#include "list.h"
-#include "system.h"
+#include <core.h>
+#include <time.h>
+#include <list.h>
+#include <crc16.h>
+#include <SEGGER_RTT.h>
+#include <mem.h>
+#include "hw_com.h"
 #include "main.h"
-#include "crc16.h"
-//#include "emac.h"
-//#include "tftp.h"
-
-#include "SEGGER_RTT.h"
 
 #pragma diag_suppress 546,550,177
 
-#define US2CLK(x) ((x)*(MCK/1000000))
-#define MS2CLK(x) ((x)*(MCK/1000))
+//#define US2CLK(x) ((x)*(MCK/1000000))
+//#define MS2CLK(x) ((x)*(MCK/1000))
 
 #define SGUID	0x743A3984FC314657
 #define MGUID	0x9EE38CE44AEC4df4	
@@ -139,40 +134,51 @@ STATEWRFL state_write_flash = WRITE_WAIT;
 u32 flash_write_error = 0;
 u32 flash_write_ok = 0;
 
-static MEMB memBuffer[64];
+//List<MEMB> MEMB::freeList;
+//template <int L> List< MEMB<L> > MEMB<L>::freeList;
 
-static List<MEMB> freeMemBuf;
-static List<MEMB> writeFlBuf;
+//template <class T> List< PtrItem<T> > PtrItem<T>::_freeList;
+//List< PtrItem<MB> > PtrItem<MB>::_freeList;
+
+//static MEMB<1024>	memb_1024[64];
+//static MEMB<512>	memb_512[8];
+
+//static MB	_asdf;
+
+//static List<MEMB> freeMemBuf;
+static ListPtr<MB> writeFlBuf;
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-static void InitFlashBuffer()
-{
-	for (byte i = 0; i < ArraySize(memBuffer); i++)
-	{
-		freeMemBuf.Add(&memBuffer[i]);
-	};							  
-}
+//static void InitFlashBuffer()
+//{
+//	for (byte i = 0; i < ArraySize(memBuffer); i++)
+//	{
+//		freeMemBuf.Add(&memBuffer[i]);
+//	};							  
+//}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-MEMB* AllocMemBuffer()
-{
-	return freeMemBuf.Get();
-}
+//MEMB* AllocMemBuffer()
+//{
+//	return freeMemBuf.Get();
+//}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-void FreeMemBuffer(MEMB* wb)
-{
-	freeMemBuf.Add(wb);
-}
+//void FreeMemBuffer(MEMB* wb)
+//{
+//	freeMemBuf.Add(wb);
+//}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-bool RequestFlashWrite(MEMB* b)
+bool RequestFlashWrite(Ptr<MB> &b)
 {
-	if ((b != 0) && (b->flwb.dataLen > 0))
+	FLWB &flwb = *((FLWB*)b->data);
+
+	if ((b.Valid()) && (flwb.dataLen > 0))
 	{
 		writeFlBuf.Add(b);
 
@@ -306,7 +312,7 @@ static u32 GetSectorAdrLen(u32 sadr, u32 *radr)
 
 //static bool run = false;
 static bool runCom = false;
-static bool runEmac = false;
+//static bool runEmac = false;
 
 //static u32 crcErrors = 0;
 //static u32 lenErrors = 0;
@@ -327,8 +333,8 @@ struct ReqMes
 	
 	union
 	{
-		struct { u32 func; u32 sadr; u32 len;				u16 align; u16 crc; }	F1; // Get CRC
-		struct { u32 func; u32 sadr;						u16 align; u16 crc; }	F2; // Erase sector
+		struct { u32 func; u32 len;							u16 align; u16 crc; }	F1; // Get CRC
+		struct { u32 func; u32 sadr;						u16 align; u16 crc; }	F2; // Get CRC sector
 		struct { u32 func; u32 padr; u32 page[PAGEDWORDS];	u16 align; u16 crc; }	F3; // Programm page
 	};
 
@@ -343,7 +349,7 @@ struct RspMes
 	union
 	{
 		struct { u32 func; u32 sadr; u32 len;	u16 sCRC;	u16 crc; }	F1; // Get CRC
-		struct { u32 func; u32 sadr; u32 status; u16 align;	u16 crc; } 	F2; // Erase sector
+		struct { u32 func; u32 sadr; u32 len;	u16 sCRC;	u16 crc; } 	F2; // Get CRC sector
 		struct { u32 func; u32 padr; u32 status; u16 align;	u16 crc; } 	F3; // Programm page
 	};
 };
@@ -489,7 +495,7 @@ static void UpdateWriteFlash()
 {
 	static u32 secStartAdr = ~0;
 	static u32 secEndAdr = ~0;
-	static MEMB *curFlwb = 0;
+	static Ptr<MB> curFlwb;
 	static FLWB *flwb = 0;
 	static u32 wadr = 0;
 	static u32 wlen = 0;
@@ -501,9 +507,9 @@ static void UpdateWriteFlash()
 
 			curFlwb = writeFlBuf.Get();
 
-			if (curFlwb != 0)
+			if (curFlwb.Valid())
 			{
-				flwb = &curFlwb->flwb;
+				flwb = (FLWB*)curFlwb->data;
 				wadr = flwb->adr;
 				wlen = flwb->dataLen;
 				wdata = (__packed u32*)(flwb->data + flwb->dataOffset);
@@ -596,9 +602,8 @@ static void UpdateWriteFlash()
 		
 		case WRITE_FINISH:	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++	
 
-			FreeMemBuffer(curFlwb);
+			curFlwb.Free();
 
-			curFlwb = 0;
 			flwb = 0;
 
 			state_write_flash = WRITE_WAIT;
@@ -607,10 +612,7 @@ static void UpdateWriteFlash()
 
 		case WRITE_INIT:	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++	
 
-			if (curFlwb != 0) 
-			{
-				FreeMemBuffer(curFlwb);
-			};
+			curFlwb.Free();
 
 			flash_write_error = 0;
 			flash_write_ok = 0;
@@ -618,7 +620,6 @@ static void UpdateWriteFlash()
 			secStartAdr = ~0;
 			secEndAdr = ~0;
 
-			curFlwb = 0;
 			flwb = 0;
 
 			state_write_flash = WRITE_WAIT;
@@ -635,14 +636,14 @@ static bool HandShake()
 	static ReqHS req;
 	static RspHS rsp;
 
-//	static ComPort::WriteBuffer wb = { false, sizeof(req), &req };
+	static ComPort::WriteBuffer wb = { false, sizeof(req), &req };
 
-//	static ComPort::ReadBuffer rb = { false, 0, sizeof(rsp), &rsp };
+	static ComPort::ReadBuffer rb = { false, 0, sizeof(rsp), &rsp };
 
-//	req.guid = slaveGUID;
-//	req.crc = GetCRC16(&req, sizeof(req)-2);
+	req.guid = slaveGUID;
+	req.crc = GetCRC16(&req, sizeof(req)-2);
 
-//	com.Connect(ComPort::ASYNC, 1, 115200, 0, 1);
+	com.Connect(ComPort::ASYNC, 115200, 0, 1);
 
 	static byte i = 0;
 
@@ -664,21 +665,53 @@ static bool HandShake()
 
 	if (!flashCheck || bootCheck)
 	{
-		SEGGER_RTT_WriteString(0, RTT_CTRL_TEXT_BRIGHT_CYAN "Start Ethernet handshake ...\n");
+		SEGGER_RTT_WriteString(0, RTT_CTRL_TEXT_BRIGHT_CYAN "Start handshake ...\n");
 
 		while (!tm.Check(200) && !c)
 		{
 			HW::ResetWDT();
 
-//			UpdateEMAC();
+			switch (i)
+			{
+				case 0:
 
-			//if (EmacIsEnergyDetected() && EmacIsCableNormal())
-			//{
-			//	runEmac = c = true;
-			//	timeOut.Reset();
-			//	
-			//	SEGGER_RTT_printf(0, RTT_CTRL_TEXT_BRIGHT_GREEN "Emac connected - %u ms\n", GetMilliseconds());
-			//};
+					com.Read(&rb, MS2COM(100), US2COM(500));
+
+					i++;
+
+					break;
+
+				case 1:
+
+					if (!com.Update())
+					{
+						if (rb.recieved && rb.len == sizeof(RspHS) && GetCRC16(rb.data, rb.len) == 0 && rsp.guid == masterGUID)
+						{
+							com.Write(&wb);
+
+							i++;
+						}
+						else
+						{
+							i = 0;
+						};
+					};
+
+					break;
+
+				case 2:
+
+					if (!com.Update())
+					{
+						runCom = c = true;
+
+						timeOut.Reset();
+
+						SEGGER_RTT_printf(0, RTT_CTRL_TEXT_BRIGHT_GREEN "Handshake OK - %u ms\n", GetMilliseconds());
+					};
+
+					break;
+			};
 		};
 	};
 
@@ -700,18 +733,17 @@ static bool Request_F1_GetCRC(ReqMes &req, RspMes &rsp)
 
 	if (req.len == sizeof(req.F1) && c)
 	{
-		len = GetSectorAdrLen(req.F1.sadr, &adr);
+		if (req.F1.len > (FLASH_END-FLASH_START)) req.F1.len = FLASH_END-FLASH_START;
 
-		if (len != 0)
-		{
-			if (len > req.F1.len) len = req.F1.len;
-
-			rsp.F1.sCRC = GetCRC16((void*)(FLASH_START+adr), len);
-		};
+		rsp.F1.sadr = 0;
+		rsp.F1.len = req.F1.len;
+		rsp.F1.sCRC = GetCRC16((void*)(FLASH_START), req.F1.len);
 	}
 	else
 	{
-		adr = ~0;
+		rsp.F1.sadr = ~0;
+		rsp.F1.len = 0;
+		rsp.F1.sCRC = 0;
 	};
 
 	rsp.F1.func = req.F1.func;
@@ -725,18 +757,36 @@ static bool Request_F1_GetCRC(ReqMes &req, RspMes &rsp)
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-static bool Request_F2_EraseSector(ReqMes &req, RspMes &rsp)
+static bool Request_F2_GetSectorCRC(ReqMes &req, RspMes &rsp)
 {
-	bool c = false;
+	u32 len = 0;
+	u32 adr = 0;
 
-	if (req.len == sizeof(req.F2))
+#ifdef CPU_SAME53
+	bool c = true;
+#elif defined(CPU_XMC48)
+	bool c = (HW::FLASH0->FSR & FLASH_FSR_PFPAGE_Msk) == 0;
+#endif
+
+	if (req.len == sizeof(req.F2) && c)
 	{
-		c = true; //IAP_EraseSector(req.F2.sadr);
+		len = GetSectorAdrLen(req.F2.sadr, &adr);
+
+		if (len != 0)
+		{
+			rsp.F2.sCRC = GetCRC16((void*)(FLASH_START+adr), len);
+		};
+	}
+	else
+	{
+		adr = ~0;
+		len = 0;
+		rsp.F2.sCRC = 0;
 	};
 
 	rsp.F2.func = req.F2.func;
-	rsp.F2.sadr = req.F2.sadr;
-	rsp.F2.status = c;
+	rsp.F2.sadr = adr;
+	rsp.F2.len = len;
 	rsp.F2.crc = GetCRC16(&rsp.F2, sizeof(rsp.F2) - 2);
 	rsp.len = sizeof(rsp.F2);
 
@@ -745,17 +795,19 @@ static bool Request_F2_EraseSector(ReqMes &req, RspMes &rsp)
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-static bool Request_F3_WritePage(MEMB *mb, RspMes &rsp)
+static bool Request_F3_WritePage(Ptr<MB> &mb, RspMes &rsp)
 {
-	ReqMes &req = *((ReqMes*)mb->flwb.data);
+	FLWB &flwb = *((FLWB*)mb->data);
+
+	ReqMes &req = *((ReqMes*)flwb.data);
 
 	bool c = false;
 
 	if (req.len == sizeof(req.F3) && flash_write_error == 0)
 	{
-		mb->flwb.adr = req.F3.padr;
-		mb->flwb.dataLen = sizeof(req.F3.page);
-		mb->flwb.dataOffset = (byte*)req.F3.page - mb->flwb.data;
+		flwb.adr = req.F3.padr;
+		flwb.dataLen = sizeof(req.F3.page);
+		flwb.dataOffset = (byte*)req.F3.page - flwb.data;
 		
 		c = RequestFlashWrite(mb);
 	};
@@ -771,16 +823,18 @@ static bool Request_F3_WritePage(MEMB *mb, RspMes &rsp)
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-static bool RequestHandler(MEMB *mb, RspMes &rsp)
+static bool RequestHandler(Ptr<MB> &mb, RspMes &rsp)
 {
-	ReqMes &req = *((ReqMes*)mb->flwb.data);
+	FLWB &flwb = *((FLWB*)(mb->data));
+
+	ReqMes &req = *((ReqMes*)flwb.data);
 
 	bool c = false;
 
 	switch (req.F1.func)
 	{
 		case 1: c = Request_F1_GetCRC(req, rsp);		break;
-		case 2: c = Request_F2_EraseSector(req, rsp);	break;
+		case 2: c = Request_F2_GetSectorCRC(req, rsp);	break;
 		case 3: c = Request_F3_WritePage(mb, rsp);		break;
 	};
 
@@ -789,7 +843,7 @@ static bool RequestHandler(MEMB *mb, RspMes &rsp)
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-/*static void UpdateCom()
+static void UpdateCom()
 {
 	static ComPort::WriteBuffer wb;
 	static ComPort::ReadBuffer rb;
@@ -803,18 +857,19 @@ static bool RequestHandler(MEMB *mb, RspMes &rsp)
 
 	static TM32 tm;
 
-	static MEMB *mb = 0;
+	static Ptr<MB> mb;
 	static ReqMes *req = 0;
 
 	switch (i)
 	{
 		case 0:
 
-			mb = AllocMemBuffer();
+			mb = GetMediumBuffer();
 
-			if (mb != 0)
+			if (mb.Valid())
 			{
-				req = (ReqMes*)mb->flwb.data;
+				FLWB &flwb = *((FLWB*)mb->data);
+				req = (ReqMes*)flwb.data;
 				i++;
 			};
 
@@ -823,7 +878,7 @@ static bool RequestHandler(MEMB *mb, RspMes &rsp)
 			rb.data = &req->F1;
 			rb.maxLen = sizeof(*req);
 			
-			com.Read(&rb, MS2RT(200), MS2RT(2));
+			com.Read(&rb, MS2COM(200), MS2COM(2));
 
 			i++;
 
@@ -837,11 +892,10 @@ static bool RequestHandler(MEMB *mb, RspMes &rsp)
 				{
 					req->len = rb.len;
 
-					if (RequestHandler(mb, rsp))
-					{
-						mb = 0;
-						req = 0;
-					};
+					RequestHandler(mb, rsp);
+					
+					mb.Free();
+					req = 0;
 
 					timeOut.Reset();
 
@@ -878,12 +932,12 @@ static bool RequestHandler(MEMB *mb, RspMes &rsp)
 
 			if (!com.Update())
 			{
-				i = (mb == 0) ? 0 : 1;
+				i = 0;
 			};
 
 			break;
 	};
-}*/
+}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -942,15 +996,15 @@ int main()
 	//RTT_Init();
 	WDT_Init();
 
-	InitFlashBuffer();
+//	InitFlashBuffer();
 	
 //	InitEMAC();
 
-	//HandShake();
+	HandShake();
 
 	//HW::SCU_RESET->ResetEnable(PID_WDT); HW::SCU_CLK->CLKCLR = SCU_CLK_CLKCLR_WDTCDI_Msk; HW::SCU_CLK->ClockDisable(PID_WDT);
 
-	while(runEmac)
+	while(runCom)
 	{
 
 #ifdef CPU_SAME53
@@ -960,15 +1014,14 @@ int main()
 #endif
 		HW::ResetWDT();
 
+		UpdateCom();
+
 		UpdateWriteFlash();
 
-//		UpdateEMAC();
-//		runEmac = TFTP_Idle();
-
-		//if (!TFTP_Connected() && timeOut.Check(10000))
-		//{
-		//	runEmac = false;
-		//};
+		if (timeOut.Check(10000))
+		{
+			runCom = false;
+		};
 
 #ifdef CPU_SAME53
 #elif defined(CPU_XMC48)
