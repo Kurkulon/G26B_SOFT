@@ -13,8 +13,8 @@
 //#define US2CLK(x) ((x)*(MCK/1000000))
 //#define MS2CLK(x) ((x)*(MCK/1000))
 
-#define SGUID	0x743A3984FC314657
-#define MGUID	0x9EE38CE44AEC4df4	
+#define SGUID	0x297DAA6334C7462d	
+#define MGUID	0x89F0321F5958B9CA	
 
 const unsigned __int64 masterGUID = MGUID;
 const unsigned __int64 slaveGUID = SGUID;
@@ -334,7 +334,7 @@ struct ReqMes
 	union
 	{
 		struct { u32 func; u32 len;							u16 align; u16 crc; }	F1; // Get CRC
-		struct { u32 func; u32 sadr;						u16 align; u16 crc; }	F2; // Get CRC sector
+		struct { u32 func; u32 sadr;						u16 align; u16 crc; }	F2; // Erase sector
 		struct { u32 func; u32 padr; u32 page[PAGEDWORDS];	u16 align; u16 crc; }	F3; // Programm page
 	};
 
@@ -348,9 +348,9 @@ struct RspMes
 
 	union
 	{
-		struct { u32 func; u32 sadr; u32 len;	u16 sCRC;	u16 crc; }	F1; // Get CRC
-		struct { u32 func; u32 sadr; u32 len;	u16 sCRC;	u16 crc; } 	F2; // Get CRC sector
-		struct { u32 func; u32 padr; u32 status; u16 align;	u16 crc; } 	F3; // Programm page
+		struct { u32 func; u32 pageLen;	u32 len;	u16 sCRC;	u16 crc; }	F1; // Get CRC
+		struct { u32 func; u32 sadr;	u32 status; u16 align;	u16 crc; } 	F2; // Erase sector
+		struct { u32 func; u32 padr;	u32 status; u16 align;	u16 crc; } 	F3; // Programm page
 	};
 };
 
@@ -733,22 +733,23 @@ static bool Request_F1_GetCRC(ReqMes &req, RspMes &rsp)
 
 	if (req.len == sizeof(req.F1) && c)
 	{
-		if (req.F1.len > (FLASH_END-FLASH_START)) req.F1.len = FLASH_END-FLASH_START;
+		//len = GetSectorAdrLen(req.F1.sadr, &adr);
 
-		rsp.F1.sadr = 0;
-		rsp.F1.len = req.F1.len;
-		rsp.F1.sCRC = GetCRC16((void*)(FLASH_START), req.F1.len);
+		if (req.F1.len != 0)
+		{
+			rsp.F1.sCRC = GetCRC16((void*)(FLASH_START), req.F1.len);
+		};
 	}
 	else
 	{
-		rsp.F1.sadr = ~0;
-		rsp.F1.len = 0;
+		adr = ~0;
+		len = 0;
 		rsp.F1.sCRC = 0;
 	};
 
 	rsp.F1.func = req.F1.func;
-	rsp.F1.sadr = adr;
-	rsp.F1.len = len;
+	rsp.F1.pageLen = PAGESIZE;
+	rsp.F1.len = req.F1.len;
 	rsp.F1.crc = GetCRC16(&rsp.F1, sizeof(rsp.F1) - 2);
 	rsp.len = sizeof(rsp.F1);
 
@@ -759,36 +760,36 @@ static bool Request_F1_GetCRC(ReqMes &req, RspMes &rsp)
 
 static bool Request_F2_GetSectorCRC(ReqMes &req, RspMes &rsp)
 {
-	u32 len = 0;
-	u32 adr = 0;
-
-#ifdef CPU_SAME53
-	bool c = true;
-#elif defined(CPU_XMC48)
-	bool c = (HW::FLASH0->FSR & FLASH_FSR_PFPAGE_Msk) == 0;
-#endif
-
-	if (req.len == sizeof(req.F2) && c)
-	{
-		len = GetSectorAdrLen(req.F2.sadr, &adr);
-
-		if (len != 0)
-		{
-			rsp.F2.sCRC = GetCRC16((void*)(FLASH_START+adr), len);
-		};
-	}
-	else
-	{
-		adr = ~0;
-		len = 0;
-		rsp.F2.sCRC = 0;
-	};
-
-	rsp.F2.func = req.F2.func;
-	rsp.F2.sadr = adr;
-	rsp.F2.len = len;
-	rsp.F2.crc = GetCRC16(&rsp.F2, sizeof(rsp.F2) - 2);
-	rsp.len = sizeof(rsp.F2);
+//	u32 len = 0;
+//	u32 adr = 0;
+//
+//#ifdef CPU_SAME53
+//	bool c = true;
+//#elif defined(CPU_XMC48)
+//	bool c = (HW::FLASH0->FSR & FLASH_FSR_PFPAGE_Msk) == 0;
+//#endif
+//
+//	if (req.len == sizeof(req.F2) && c)
+//	{
+//		len = GetSectorAdrLen(req.F2.sadr, &adr);
+//
+//		if (len != 0)
+//		{
+//			rsp.F2.sCRC = GetCRC16((void*)(FLASH_START+adr), len);
+//		};
+//	}
+//	else
+//	{
+//		adr = ~0;
+//		len = 0;
+//		rsp.F2.sCRC = 0;
+//	};
+//
+//	rsp.F2.func = req.F2.func;
+//	rsp.F2.sadr = adr;
+//	rsp.F2.len = len;
+//	rsp.F2.crc = GetCRC16(&rsp.F2, sizeof(rsp.F2) - 2);
+//	rsp.len = sizeof(rsp.F2);
 
 	return false;
 }
@@ -864,7 +865,7 @@ static void UpdateCom()
 	{
 		case 0:
 
-			mb = GetMediumBuffer();
+			mb = AllocMemBuffer(sizeof(ReqMes));
 
 			if (mb.Valid())
 			{
@@ -872,6 +873,8 @@ static void UpdateCom()
 				req = (ReqMes*)flwb.data;
 				i++;
 			};
+
+			break;
 
 		case 1:
 
@@ -894,9 +897,6 @@ static void UpdateCom()
 
 					RequestHandler(mb, rsp);
 					
-					mb.Free();
-					req = 0;
-
 					timeOut.Reset();
 
 					i++;
@@ -905,10 +905,10 @@ static void UpdateCom()
 				{
 					if (timeOut.Check(2000))
 					{
-						runCom = false;
+						//runCom = false;
 					};
 
-					i = 1;
+					i = 4;
 				};
 			};
 
@@ -932,6 +932,8 @@ static void UpdateCom()
 
 			if (!com.Update())
 			{
+				mb.Free();
+				req = 0;
 				i = 0;
 			};
 
@@ -952,7 +954,7 @@ static void WDT_Init()
 		#ifndef _DEBUG
 		HW::WDT->CTRLA = WDT_ENABLE;
 		#else
-		HW::WDT->CTRLA = WDT_ENABLE;
+		HW::WDT->CTRLA = 0;//WDT_ENABLE;
 		#endif
 
 		while(HW::WDT->SYNCBUSY);
@@ -982,7 +984,7 @@ extern "C" void _MainAppStart(u32 adr);
 
 int main()
 {
-	//__breakpoint(0);
+	__breakpoint(0);
 
 	SEGGER_RTT_Init();
 
@@ -1020,7 +1022,7 @@ int main()
 
 		if (timeOut.Check(10000))
 		{
-			runCom = false;
+//			runCom = false;
 		};
 
 #ifdef CPU_SAME53
@@ -1055,7 +1057,7 @@ int main()
 
 	SEGGER_RTT_printf(0, RTT_CTRL_TEXT_BRIGHT_GREEN "Main App Start ... %u ms\n", GetMilliseconds());
 
-	//__breakpoint(0);
+	__breakpoint(0);
 
 	_MainAppStart(FLASH_START);
 
