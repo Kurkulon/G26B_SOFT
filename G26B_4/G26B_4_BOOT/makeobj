@@ -85,10 +85,10 @@ libname = $(libdir)\$(targetcpu)_$(libsuffix).a
 	@echo buildnumvar = $(%buildnumvar) 
 
 
-##################################################################################################
+################################################################################################## --diag_suppress=68,368,1165,1299,3017
 
 compiler_options = $(debug_compiler_options) $(cpu_compiler_options) --gnu --asm --interleave -g -c --diag_style=ide &
-	  --feedback "$(objdir)\$(target_name).fed" --diag_suppress=68,368,1165,1299,3017 &
+	  --feedback "$(objdir)\$(target_name).fed" &
 	 -D__MICROLIB -DCPU_$(targetcpu) -DBOOTLOADER --no_depend_system_headers --reduce_paths -I$(libdir)\cpp
 
 ##################################################################################################
@@ -161,6 +161,7 @@ $(objdir)\$(target_name).axf : $(cpu_obj) $(modules_obj)
 ##################################################################################################
 
 .cpp.o:
+	@rem cppcheck -D_DEBUG -DCPU_$(targetcpu) --template="{file}({line}) : {severity} : {id} : {message}" $[@
 	@echo Compiling $[. ...
 	@$(bindir)\armcc $(compiler_options) --depend="$(objdir)\$^&.d" -o "$(objdir)\$^." $[@
 

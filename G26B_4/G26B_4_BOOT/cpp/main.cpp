@@ -193,58 +193,58 @@ bool RequestFlashWrite(Ptr<MB> &b)
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#pragma push
-#pragma O3
-#pragma Otime
-
-static void CopyDataDMA(volatile void *src, volatile void *dst, u16 len)
-{
-	using namespace HW;
-
-#ifdef CPU_SAME53
-
-	DmaTable[MEMCOPY_DMACH].SRCADDR = (byte*)src+len;
-	DmaTable[MEMCOPY_DMACH].DSTADDR = (byte*)dst+len;
-	DmaTable[MEMCOPY_DMACH].DESCADDR = 0;
-	DmaTable[MEMCOPY_DMACH].BTCNT = len;
-	DmaTable[MEMCOPY_DMACH].BTCTRL = DMDSC_VALID|DMDSC_BEATSIZE_BYTE|DMDSC_DSTINC|DMDSC_SRCINC;
-
-	DMAC->CH[MEMCOPY_DMACH].INTENCLR = ~0;
-	DMAC->CH[MEMCOPY_DMACH].INTFLAG = ~0;
-	DMAC->CH[MEMCOPY_DMACH].CTRLA = DMCH_ENABLE|DMCH_TRIGACT_TRANSACTION;
-	DMAC->SWTRIGCTRL = 1<<MEMCOPY_DMACH;
-
-#elif defined(CPU_XMC48)
-
-	register u32 t __asm("r0");
-
-	HW::GPDMA1->DMACFGREG = 1;
-
-	HW::GPDMA1_CH3->CTLL = DST_INC|SRC_INC|TT_FC(0)|DEST_MSIZE(0)|SRC_MSIZE(0);
-	HW::GPDMA1_CH3->CTLH = BLOCK_TS(len);
-
-	HW::GPDMA1_CH3->SAR = (u32)src;
-	HW::GPDMA1_CH3->DAR = (u32)dst;
-	HW::GPDMA1_CH3->CFGL = 0;
-	HW::GPDMA1_CH3->CFGH = PROTCTL(1);
-
-	HW::GPDMA1->CHENREG = 0x101<<3;
-
-#endif
-}
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-static bool CheckDataComplete()
-{
-#ifdef CPU_SAME53
-	return (HW::DMAC->CH[MEMCOPY_DMACH].CTRLA & DMCH_ENABLE) == 0 || (HW::DMAC->CH[MEMCOPY_DMACH].INTFLAG & DMCH_TCMPL);
-#elif defined(CPU_XMC48)
-	return (HW::GPDMA1->CHENREG & (1<<3)) == 0;
-#endif
-}
-
-#pragma pop
+//#pragma push
+//#pragma O3
+//#pragma Otime
+//
+//static void CopyDataDMA(volatile void *src, volatile void *dst, u16 len)
+//{
+//	using namespace HW;
+//
+//#ifdef CPU_SAME53
+//
+//	DmaTable[MEMCOPY_DMACH].SRCADDR = (byte*)src+len;
+//	DmaTable[MEMCOPY_DMACH].DSTADDR = (byte*)dst+len;
+//	DmaTable[MEMCOPY_DMACH].DESCADDR = 0;
+//	DmaTable[MEMCOPY_DMACH].BTCNT = len;
+//	DmaTable[MEMCOPY_DMACH].BTCTRL = DMDSC_VALID|DMDSC_BEATSIZE_BYTE|DMDSC_DSTINC|DMDSC_SRCINC;
+//
+//	DMAC->CH[MEMCOPY_DMACH].INTENCLR = ~0;
+//	DMAC->CH[MEMCOPY_DMACH].INTFLAG = ~0;
+//	DMAC->CH[MEMCOPY_DMACH].CTRLA = DMCH_ENABLE|DMCH_TRIGACT_TRANSACTION;
+//	DMAC->SWTRIGCTRL = 1<<MEMCOPY_DMACH;
+//
+//#elif defined(CPU_XMC48)
+//
+//	register u32 t __asm("r0");
+//
+//	HW::GPDMA1->DMACFGREG = 1;
+//
+//	HW::GPDMA1_CH3->CTLL = DST_INC|SRC_INC|TT_FC(0)|DEST_MSIZE(0)|SRC_MSIZE(0);
+//	HW::GPDMA1_CH3->CTLH = BLOCK_TS(len);
+//
+//	HW::GPDMA1_CH3->SAR = (u32)src;
+//	HW::GPDMA1_CH3->DAR = (u32)dst;
+//	HW::GPDMA1_CH3->CFGL = 0;
+//	HW::GPDMA1_CH3->CFGH = PROTCTL(1);
+//
+//	HW::GPDMA1->CHENREG = 0x101<<3;
+//
+//#endif
+//}
+//
+////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+//static bool CheckDataComplete()
+//{
+//#ifdef CPU_SAME53
+//	return (HW::DMAC->CH[MEMCOPY_DMACH].CTRLA & DMCH_ENABLE) == 0 || (HW::DMAC->CH[MEMCOPY_DMACH].INTFLAG & DMCH_TCMPL);
+//#elif defined(CPU_XMC48)
+//	return (HW::GPDMA1->CHENREG & (1<<3)) == 0;
+//#endif
+//}
+//
+//#pragma pop
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -322,8 +322,8 @@ static bool runCom = false;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-__packed struct ReqHS { unsigned __int64 guid; u16 crc; };
-__packed struct RspHS { unsigned __int64 guid; u16 crc; };
+__packed struct ReqHS { u64 guid; u16 crc; };
+__packed struct RspHS { u64 guid; u16 crc; };
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -333,9 +333,9 @@ struct ReqMes
 	
 	union
 	{
-		struct { u32 func; u32 len;							u16 align; u16 crc; }	F1; // Get CRC
-		struct { u32 func; u32 sadr;						u16 align; u16 crc; }	F2; // Erase sector
-		struct { u32 func; u32 padr; u32 page[PAGEDWORDS];	u16 align; u16 crc; }	F3; // Programm page
+		struct { u32 func; u32 len;										u16 align; u16 crc; }	F1; // Get CRC
+		struct { u32 func; u32 sadr;									u16 align; u16 crc; }	F2; // Erase sector
+		struct { u32 func; u32 padr; u32 plen; u32 pdata[PAGEDWORDS];	u16 align; u16 crc; }	F3; // Programm page
 	};
 
 };
@@ -456,31 +456,31 @@ static bool REQ_EraseSector(u32 sa)
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-u32 FLASH_Read(u32 addr, byte *data, u32 size) 
-{
-#ifdef CPU_SAME53
-#elif defined(CPU_XMC48)
-	while (HW::FLASH0->FSR & FLASH_FSR_PFPAGE_Msk);
-#endif
-
-	addr += FLASH_START;
-
-	if (addr >= FLASH_END)
-	{
-		return 0;
-	};
-
-	if ((addr + size) >= FLASH_END)
-	{
-		size = FLASH_END - addr;	
-	};
-
-	CopyDataDMA((void*)addr, data, size);
-
-	while (!CheckDataComplete());
-
-	return size;
-}
+//u32 FLASH_Read(u32 addr, byte *data, u32 size) 
+//{
+//#ifdef CPU_SAME53
+//#elif defined(CPU_XMC48)
+//	while (HW::FLASH0->FSR & FLASH_FSR_PFPAGE_Msk);
+//#endif
+//
+//	addr += FLASH_START;
+//
+//	if (addr >= FLASH_END)
+//	{
+//		return 0;
+//	};
+//
+//	if ((addr + size) >= FLASH_END)
+//	{
+//		size = FLASH_END - addr;	
+//	};
+//
+//	CopyDataDMA((void*)addr, data, size);
+//
+//	while (!CheckDataComplete());
+//
+//	return size;
+//}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -807,8 +807,8 @@ static bool Request_F3_WritePage(Ptr<MB> &mb, RspMes &rsp)
 	if (req.len == sizeof(req.F3) && flash_write_error == 0)
 	{
 		flwb.adr = req.F3.padr;
-		flwb.dataLen = sizeof(req.F3.page);
-		flwb.dataOffset = (byte*)req.F3.page - flwb.data;
+		flwb.dataLen = req.F3.plen;
+		flwb.dataOffset = (byte*)req.F3.pdata - flwb.data;
 		
 		c = RequestFlashWrite(mb);
 	};
@@ -905,7 +905,7 @@ static void UpdateCom()
 				{
 					if (timeOut.Check(2000))
 					{
-						//runCom = false;
+						runCom = false;
 					};
 
 					i = 4;
@@ -984,7 +984,7 @@ extern "C" void _MainAppStart(u32 adr);
 
 int main()
 {
-	__breakpoint(0);
+	//__breakpoint(0);
 
 	SEGGER_RTT_Init();
 
@@ -1022,7 +1022,7 @@ int main()
 
 		if (timeOut.Check(10000))
 		{
-//			runCom = false;
+			runCom = false;
 		};
 
 #ifdef CPU_SAME53
@@ -1057,7 +1057,7 @@ int main()
 
 	SEGGER_RTT_printf(0, RTT_CTRL_TEXT_BRIGHT_GREEN "Main App Start ... %u ms\n", GetMilliseconds());
 
-	__breakpoint(0);
+	//__breakpoint(0);
 
 	_MainAppStart(FLASH_START);
 

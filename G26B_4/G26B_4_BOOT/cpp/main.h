@@ -6,7 +6,7 @@
 
 #define VERSION			0x0101
 
-extern u32 FLASH_Read(u32 addr, byte *data, u32 size);
+//extern u32 FLASH_Read(u32 addr, byte *data, u32 size);
 //extern bool IAP_EraseSector(u32 sa);
 
 

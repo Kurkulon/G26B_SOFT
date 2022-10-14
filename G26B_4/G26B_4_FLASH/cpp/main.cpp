@@ -21,7 +21,7 @@ const unsigned __int64 slaveGUID = SGUID;
 //#define FLASH0 (0x00400000+BOOTSIZE)
 
 static u32 PAGESIZE = 512;
-#define PAGEDWORDS (512>>2)
+#define PAGEDWORDS (1024>>2)
 
 static u32 flashPages[] = {
 #include "G26B_4_PWM.bin.h"
@@ -73,9 +73,9 @@ struct Request
 {
 	union
 	{
-		struct { u32 func; u32 len;							u16 align; u16 crc; }	F1; // Get CRC
-		struct { u32 func; u32 sadr;						u16 align; u16 crc; }	F2; // Erase sector
-		struct { u32 func; u32 padr; u32 page[PAGEDWORDS];	u16 align; u16 crc; }	F3; // Programm page
+		struct { u32 func; u32 len;										u16 align; u16 crc; }	F1; // Get CRC
+		struct { u32 func; u32 sadr;									u16 align; u16 crc; }	F2; // Erase sector
+		struct { u32 func; u32 padr; u32 plen; u32 pdata[PAGEDWORDS];	u16 align; u16 crc; }	F3; // Programm page
 	};
 };
 
@@ -556,27 +556,34 @@ static bool UpdateProgramSector(bool start)
 	switch(i)
 	{
 		case 0:	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			
+		{	
 			req.F3.func = 3;
 			req.F3.padr = pageAdr;
 			req.F3.align += 1;
 
 			p = &flashPages[pageAdr/4];
 
-			for (i32 j = 0, t = (sizeof(flashPages)-pageAdr)/4; j < ArraySize(req.F3.page); j++, t--)
+			for (u32 j = 0, t = (sizeof(flashPages)-pageAdr)/4; j < (PAGESIZE>>2); j++, t--)
 			{
-				req.F3.page[j] = (t > 0) ? p[j] : 0;
+				req.F3.pdata[j] = (t > 0) ? p[j] : 0;
 			};
 
-			req.F3.crc = GetCRC16(&req, sizeof(req.F3) - sizeof(req.F3.crc));
+			req.F3.plen = PAGESIZE;
+
+			DataPointer pd(req.F3.pdata);
+
+			pd.b += PAGESIZE + sizeof(req.F3.align);
+
+			*(pd.w++) = GetCRC16(&req, (u32)(pd.b - (byte*)&req));
 
 			wb.data = &req;
-			wb.len = sizeof(req.F3);
+			wb.len = (u16)(pd.b - (byte*)&req);
 			Sleep(3);
 			com1.Write(&wb);
 			i++;
 
 			break;
+		};
 
 		case 1:	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
