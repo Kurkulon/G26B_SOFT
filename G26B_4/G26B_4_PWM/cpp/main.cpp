@@ -688,10 +688,9 @@ static void UpdateTemp()
 #ifndef WIN32
 				if (!__debug) { HW::ResetWDT(); };
 #endif
+				buf[0] = 0;
 
-				buf[0] = 0x11;
-
-				dsc.adr = 0x68;
+				dsc.adr = 0x49;
 				dsc.wdata = buf;
 				dsc.wlen = 1;
 				dsc.rdata = &rbuf;
@@ -714,118 +713,14 @@ static void UpdateTemp()
 				if (dsc.ack && dsc.readedLen == dsc.rlen)
 				{
 					i32 t = (i16)ReverseWord(rbuf);
-					
-					t = (t * 10 + 128) / 256;
-
-					if (t < (-600))
-					{
-						t += 2560;
-					};
-
-					tempClock = t;
-				};
-				//else
-				//{
-				//	tempClock = -2730;
-				//};
-
-				i++;
-			};
-
-			break;
-
-		case 2:
-
-			buf[0] = 0x0E;
-			buf[1] = 0x20;
-			buf[2] = 0xC8;
-
-			dsc2.adr = 0x68;
-			dsc2.wdata = buf;
-			dsc2.wlen = 3;
-			dsc2.rdata = 0;
-			dsc2.rlen = 0;
-			dsc2.wdata2 = 0;
-			dsc2.wlen2 = 0;
-
-			if (I2C_AddRequest(&dsc2))
-			{
-				i++;
-			};
-
-			break;
-
-		case 3:
-
-			if (dsc2.ready)
-			{
-				buf[0] = 0;
-
-				dsc.adr = 0x49;
-				dsc.wdata = buf;
-				dsc.wlen = 1;
-				dsc.rdata = &rbuf;
-				dsc.rlen = 2;
-				dsc.wdata2 = 0;
-				dsc.wlen2 = 0;
-
-				if (I2C_AddRequest(&dsc))
-				{
-					i++;
-				};
-			};
-
-			break;
-
-		case 4:
-
-			if (dsc.ready)
-			{
-				if (dsc.ack && dsc.readedLen == dsc.rlen)
-				{
-					i32 t = (i16)ReverseWord(rbuf);
 
 					temp = (t * 10 + 64) / 128;
 				};
-				//else
-				//{
-				//	temp = -2730;
-				//};
-
-#ifdef CPU_SAME53	
 
 				i = 0;
 			};
 
 			break;
-
-#elif defined(CPU_XMC48)
-
-				HW::SCU_GENERAL->DTSCON = SCU_GENERAL_DTSCON_START_Msk;
-				
-				i++;
-			};
-
-			break;
-
-		case 5:
-
-			if (HW::SCU_GENERAL->DTSSTAT & SCU_GENERAL_DTSSTAT_RDY_Msk)
-			{
-				cpu_temp = ((i32)(HW::SCU_GENERAL->DTSSTAT & SCU_GENERAL_DTSSTAT_RESULT_Msk) - 605) * 1000 / 205;
-
-				i = 0;
-			};
-
-			break;
-
-#elif defined(WIN32)
-
-				i = 0;
-			};
-
-			break;
-#endif
 	};
 }
 
