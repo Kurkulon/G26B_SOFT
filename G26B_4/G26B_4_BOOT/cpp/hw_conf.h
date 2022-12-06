@@ -365,9 +365,9 @@
 	#define PIN_URXD0			23 
 	#define PIN_RTS0			24 
 
-	#define UTXD0				(1<<PIN_UTXD0) 
-	#define URXD0				(1<<PIN_URXD0) 
-	#define RTS0				(1<<PIN_RTS0) 
+	#define UTXD0				(1UL<<PIN_UTXD0) 
+	#define URXD0				(1UL<<PIN_URXD0) 
+	#define RTS0				(1UL<<PIN_RTS0) 
 
 	#define UART0_GEN_SRC		GEN_MCK
 	#define UART0_GEN_CLK		GEN_MCK_CLK

@@ -176,7 +176,7 @@ static ListPtr<MB> writeFlBuf;
 
 bool RequestFlashWrite(Ptr<MB> &b)
 {
-	FLWB &flwb = *((FLWB*)b->data);
+	FLWB &flwb = *((FLWB*)b->GetDataPtr());
 
 	if ((b.Valid()) && (flwb.dataLen > 0))
 	{
@@ -509,7 +509,7 @@ static void UpdateWriteFlash()
 
 			if (curFlwb.Valid())
 			{
-				flwb = (FLWB*)curFlwb->data;
+				flwb = (FLWB*)curFlwb->GetDataPtr();
 				wadr = flwb->adr;
 				wlen = flwb->dataLen;
 				wdata = (__packed u32*)(flwb->data + flwb->dataOffset);
@@ -798,7 +798,7 @@ static bool Request_F2_GetSectorCRC(ReqMes &req, RspMes &rsp)
 
 static bool Request_F3_WritePage(Ptr<MB> &mb, RspMes &rsp)
 {
-	FLWB &flwb = *((FLWB*)mb->data);
+	FLWB &flwb = *((FLWB*)mb->GetDataPtr());
 
 	ReqMes &req = *((ReqMes*)flwb.data);
 
@@ -826,7 +826,7 @@ static bool Request_F3_WritePage(Ptr<MB> &mb, RspMes &rsp)
 
 static bool RequestHandler(Ptr<MB> &mb, RspMes &rsp)
 {
-	FLWB &flwb = *((FLWB*)(mb->data));
+	FLWB &flwb = *((FLWB*)(mb->GetDataPtr()));
 
 	ReqMes &req = *((ReqMes*)flwb.data);
 
@@ -869,7 +869,7 @@ static void UpdateCom()
 
 			if (mb.Valid())
 			{
-				FLWB &flwb = *((FLWB*)mb->data);
+				FLWB &flwb = *((FLWB*)mb->GetDataPtr());
 				req = (ReqMes*)flwb.data;
 				i++;
 			};
