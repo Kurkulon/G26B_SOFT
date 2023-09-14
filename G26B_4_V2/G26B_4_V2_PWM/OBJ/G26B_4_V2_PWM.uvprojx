@@ -13,16 +13,16 @@
       <uAC6>0</uAC6>
       <TargetOption>
         <TargetCommonOption>
-          <Device>ATSAME53N19A</Device>
-          <Vendor>Atmel</Vendor>
+          <Device>ATSAME53J18A</Device>
+          <Vendor>Microchip</Vendor>
           <PackID>Atmel.SAME53_DFP.1.1.118</PackID>
           <PackURL>http://packs.download.atmel.com/</PackURL>
-          <Cpu>IRAM(0x20000000,0x30000) IRAM2(0x20000000,0x8000) IRAM3(0x20000000,0x8000) IRAM4(0x47000000,0x2000) IROM(0x00000000,0x80000) CPUTYPE("Cortex-M4") FPU2 CLOCK(12000000) ELITTLE</Cpu>
+          <Cpu>IRAM(0x20000000,0x20000) IRAM2(0x20000000,0x8000) IRAM3(0x20000000,0x8000) IRAM4(0x47000000,0x2000) IROM(0x00000000,0x40000) CPUTYPE("Cortex-M4") FPU2 CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
           <StartupFile></StartupFile>
-          <FlashDriverDll>UL2CM3(-S0 -C0 -P0 -FD20000000 -FC1000 -FN1 -FF0ATSAME53_512 -FS00 -FL080000 -FP0($$Device:ATSAME53N19A$keil\arm_addon\flash\ATSAME53_512.FLM))</FlashDriverDll>
+          <FlashDriverDll>UL2CM3(-S0 -C0 -P0 -FD20000000 -FC1000 -FN1 -FF0ATSAME53_256 -FS00 -FL040000 -FP0($$Device:ATSAME53J18A$keil\arm_addon\flash\ATSAME53_256.FLM))</FlashDriverDll>
           <DeviceId>0</DeviceId>
-          <RegisterFile>$$Device:ATSAME53N19A$include\sam.h</RegisterFile>
+          <RegisterFile>$$Device:ATSAME53J18A$include\sam.h</RegisterFile>
           <MemoryEnv></MemoryEnv>
           <Cmp></Cmp>
           <Asm></Asm>
@@ -32,7 +32,7 @@
           <SLE66CMisc></SLE66CMisc>
           <SLE66AMisc></SLE66AMisc>
           <SLE66LinkerMisc></SLE66LinkerMisc>
-          <SFDFile>$$Device:ATSAME53N19A$svd\ATSAME53N19A.svd</SFDFile>
+          <SFDFile>$$Device:ATSAME53J18A$svd\ATSAME53J18A.svd</SFDFile>
           <bCustSvd>0</bCustSvd>
           <UseEnv>0</UseEnv>
           <BinPath></BinPath>
@@ -137,7 +137,7 @@
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2CM3.DLL</Flash2>
-          <Flash3>"" ()</Flash3>
+          <Flash3></Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -245,12 +245,12 @@
               <IRAM>
                 <Type>0</Type>
                 <StartAddress>0x20000000</StartAddress>
-                <Size>0x30000</Size>
+                <Size>0x20000</Size>
               </IRAM>
               <IROM>
                 <Type>1</Type>
                 <StartAddress>0x0</StartAddress>
-                <Size>0x80000</Size>
+                <Size>0x40000</Size>
               </IROM>
               <XRAM>
                 <Type>0</Type>
@@ -275,7 +275,7 @@
               <OCR_RVCT4>
                 <Type>1</Type>
                 <StartAddress>0x0</StartAddress>
-                <Size>0x80000</Size>
+                <Size>0x40000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
                 <Type>1</Type>
@@ -300,7 +300,7 @@
               <OCR_RVCT9>
                 <Type>0</Type>
                 <StartAddress>0x20000000</StartAddress>
-                <Size>0x30000</Size>
+                <Size>0x20000</Size>
               </OCR_RVCT9>
               <OCR_RVCT10>
                 <Type>0</Type>

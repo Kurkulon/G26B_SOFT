@@ -4,7 +4,7 @@
 
 #define BOOT_COM
 //#define BOOT_EMAC
-//#define BOOT_HANDSHAKE
+#define BOOT_HANDSHAKE
 //#define BOOT_COM_MODE					ComPort::ASYNC
 #define BOOT_COM_SPEED				115200
 #define BOOT_COM_PARITY				0
@@ -16,8 +16,8 @@
 #define BOOT_SGUID					0x9CBA4DBCC32940aa
 #define BOOT_MGUID					0x846F4AC5F9B8A8C7
 //#define BOOT_START_SECTOR				8
-#define BOOT_START_BREAKPOINT
-#define BOOT_EXIT_BREAKPOINT
+//#define BOOT_START_BREAKPOINT
+//#define BOOT_EXIT_BREAKPOINT
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

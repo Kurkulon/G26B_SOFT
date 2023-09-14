@@ -25,59 +25,30 @@
 #ifdef CPU_SAME53	
 
 	// Test Pins
-	// 3	- PC00	
-	// 4	- PC01	
-	// 5	- PC02	
-	// 6	- PC30	
-	// 9	- PB04	
-	// 10	- PB05	
-	// 13	- PB06
-	// 14	- PB07	
-	// 15	- PB08	
-	// 16	- PB09	
-	// 17	- PA04	
-	// 18	- PA05	
-	// 19	- PA06	
-	// 20	- PA07	
-	// 21	- PC05	
-	// 22	- PC06	
-	// 23	- PC07	
-	// 32	- PB10	- ManTrmIRQ2	
-	// 33	- PB11	- ManRcvIRQ	
-	// 34	- PB12	- ManRcvIRQ sync true	
-	// 40	- PC10
-	// 41	- PC11
-	// 42	- PC12
-	// 43	- PC13	
-	// 44	- PC14	
-	// 45	- PC15	
-	// 48	- PA14	
-	// 49	- PA15	
-	// 52	- PA16
-	// 53	- PA17	
-	// 54	- PA18	
-	// 55	- PA19	
-	// 56	- PC16
-	// 57	- PC17
-	// 58	- PC18
-	// 59	- PC19
-	// 60	- PC20	
-	// 61	- PC21
-	// 64	- PB16
-	// 65	- PB17
-	// 66	- PB18
-	// 67	- PB19	
-	// 68	- PB20	
-	// 69	- PB21	
-	// 70	- PA20	
-	// 71	- PA21	
-	// 75	- PA25	- main loop
-	// 79	- PB23	- PwmDmaIRQ
-	// 80	- PB24	
-	// 81	- PB25	
-	// 82	- PC24
-	// 83	- PC25	
-	// 84	- PC26
+	// 6	- PB05	
+	// 9	- PB06
+	// 10	- PB07	
+	// 11	- PB08	
+	// 12	- PB09	
+	// 14	- PA05	
+	// 19	- PA10	
+	// 20	- PA11	
+	// 31	- PA14	
+	// 32	- PA15	
+	// 35	- PA16
+	// 36	- PA17	
+	// 37	- PA18	
+	// 38	- PA19	
+	// 39	- PB16
+	// 40	- PB17
+	// 41	- PA20	
+	// 42	- PA21	
+	// 46	- PA25	- main loop
+	// 50	- PB23	- PwmDmaIRQ
+
+	// 	- ManTrmIRQ2	
+	// 	- ManRcvIRQ	
+	// 	- ManRcvIRQ sync true	
 
 
 	// ++++++++++++++	GEN	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -369,7 +340,7 @@
 	#define PIO_DRVEN			HW::PIOA
 	#define PIO_WF_PWM			HW::PIOA
 	#define PIO_PWML			HW::PIOA
-	#define PIO_PWMH			HW::PIOA
+	#define PIO_PWMH			HW::PIOB
 	#define PIO_POL				HW::PIOB
 	#define PIO_GEN				HW::PIOB
 	#define PIO_DAC0			HW::PIOA
@@ -429,17 +400,20 @@
 
 	// ++++++++++++++	PIO INIT	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	#define PIOA_INIT_DIR		(DRVEN|WF_PWM|PWMLA|PWMLB|RTS0|ENVCORE)
+	#define PIOA_INIT_DIR		(DRVEN|WF_PWM|PWMLA|PWMLB|ENVCORE|PA05|PA10|PA11|PA14|PA15|PA16|PA17|PA18|PA19|PA20|PA21|PA25)
 	#define PIOA_INIT_SET		(DRVEN|ENVCORE)
-	#define PIOA_INIT_CLR		(WF_PWM|PWMLA|PWMLB)
+	#define PIOA_INIT_CLR		(WF_PWM|PWMLA|PWMLB|PA05|PA10|PA11|PA14|PA15|PA16|PA17|PA18|PA19|PA20|PA21|PA25)
+	#define PIOA_TEST_MASK		(DRVEN|WF_PWM|PWMLA|PWMLB|SDA|SCL|UTXD0|URXD0|RTS0|ENVCORE)
 
-	#define PIOB_INIT_DIR		(POLWLA|POLWHA|POLWLB|POLWHB|PWMHA|PWMHB|L1|L2)
+	#define PIOB_INIT_DIR		(POLWLA|POLWHA|POLWLB|POLWHB|PWMHA|PWMHB|L1|L2|GENA|GENB|PB05|PB06|PB07|PB08|PB09|PB12|PB16|PB17|PB23)
 	#define PIOB_INIT_SET		(0)
-	#define PIOB_INIT_CLR		(POLWLA|POLWHA|POLWLB|POLWHB|PWMHA|PWMHB|L1|L2)
+	#define PIOB_INIT_CLR		(POLWLA|POLWHA|POLWLB|POLWHB|PWMHA|PWMHB|L1|L2|GENA|GENB|PB05|PB06|PB07|PB08|PB09|PB12|PB16|PB17|PB23)
+	#define PIOB_TEST_MASK		(POLWLA|POLWHA|POLWLB|POLWHB|PWMHA|PWMHB|RXD|L1|L2|GENA|GENB)
 
 	#define PIOC_INIT_DIR		(0)
 	#define PIOC_INIT_SET		(0)
 	#define PIOC_INIT_CLR		(0)
+	#define PIOC_TEST_MASK		(0)
 
 	#define Pin_MainLoop_Set()	HW::PIOA->BSET(25)
 	#define Pin_MainLoop_Clr()	HW::PIOA->BCLR(25)
