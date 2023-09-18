@@ -35,10 +35,10 @@
 extern void UpdateHardware();
 extern void PrepareFire(u16 waveFreq, u16 waveAmp);
 
-extern u16 CRC_CCITT_PIO(const void *data, u32 len, u16 init = ~0);
-extern u16 CRC_CCITT_DMA(const void *data, u32 len, u16 init = ~0);
-extern bool CRC_CCITT_DMA_Async(const void* data, u32 len, u16 init = ~0);
-extern bool CRC_CCITT_DMA_CheckComplete(u16* crc);
+//extern u16 CRC_CCITT_PIO(const void *data, u32 len, u16 init = ~0);
+//extern u16 CRC_CCITT_DMA(const void *data, u32 len, u16 init = ~0);
+//extern bool CRC_CCITT_DMA_Async(const void* data, u32 len, u16 init = ~0);
+//extern bool CRC_CCITT_DMA_CheckComplete(u16* crc);
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
