@@ -1191,13 +1191,15 @@ int main()
 
 		Pin_MainLoop_Clr();
 
-		PIO_PWM->BTGL(PIN_PWMLA);
+		PIO_PWML->BTGL(PIN_PWMLA);
 
 		fc++;
 
 		if (tm.Check(1000))
 		{
 			fps = fc; fc = 0; 
+
+			PrepareFire(mv.freq, mv.fireAmp);
 
 #ifdef WIN32
 

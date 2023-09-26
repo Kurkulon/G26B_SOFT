@@ -50,7 +50,7 @@
 	// 39	- PB16
 	// 40	- PB17
 	// 41	- PA20	
-	// 42	- PA21	
+	// 42	- PA21	- PrepareFire
 	// 46	- PA25	- main loop
 	// 50	- PB23	- PwmDmaIRQ
 
@@ -88,10 +88,10 @@
 
 	// ++++++++++++++	DMA	0...31	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	#define	PWMLA_DMA				DMA_CH0
-	#define	PWMHA_DMA				DMA_CH1
-	#define	PWMLB_DMA				DMA_CH2
-	#define	PWMHB_DMA				DMA_CH3
+	#define	PWM_DMA					DMA_CH0
+	//#define	PWMHA_DMA				DMA_CH1
+	//#define	PWMLB_DMA				DMA_CH2
+	//#define	PWMHB_DMA				DMA_CH3
 	#define	DACTC_DMA				DMA_CH4
 	#define	UART0_DMA				DMA_CH5
 	//#define	NAND_MEMCOPY_DMA	DMA_CH6
@@ -103,7 +103,7 @@
 	// ++++++++++++++	EVENT 0...31	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	#define EVENT_PWM_SYNC		0
-	#define EVENT_PWMDMA		1
+	#define EVENT_PWM			1
 	#define EVENT_PWMCOUNT		2
 	#define EVENT_MANR_1		3
 	#define EVENT_MANR_2		4
@@ -160,7 +160,7 @@
 
 	#define PWM_TCC				TCC0
 	#define MANR_TCC			TCC1
-	#define PWMDMA_TCC			TCC2
+	//#define PWMDMA_TCC			TCC2
 	#define PWMCOUNT_TCC		TCC3
 	#define MANT_TCC			TCC4
 
@@ -263,7 +263,8 @@
 
 	#define PIO_DRVEN			HW::PIOA
 	#define PIO_WF_PWM			HW::PIOA
-	#define PIO_PWM				HW::PIOA
+	#define PIO_PWML			HW::PIOA
+	#define PIO_PWMH			HW::PIOB
 	#define PIO_POL				HW::PIOB
 	#define PIO_GEN				HW::PIOB
 	#define PIO_DAC0			HW::PIOA
