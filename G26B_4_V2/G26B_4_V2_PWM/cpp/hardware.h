@@ -32,7 +32,6 @@
 ////++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
-extern void UpdateHardware();
 extern void PrepareFire(u16 waveFreq, u16 waveAmp);
 
 //extern u16 CRC_CCITT_PIO(const void *data, u32 len, u16 init = ~0);
@@ -50,6 +49,7 @@ extern void DisableFire();
 
 extern void InitHardware();
 extern void UpdateHardware();
+extern u16 GetCurFireVoltage();
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

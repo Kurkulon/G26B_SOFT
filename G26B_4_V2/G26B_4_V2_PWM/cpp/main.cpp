@@ -747,13 +747,15 @@ static void UpdateHV()
 
 			if (tm.Check(10))
 			{
-				wbuf[0] = 0x20;	
+				wbuf[0] = 2;
+				wbuf[1] = 0;
+				wbuf[2] = 0;
 
-				dsc.adr = 0x28;
+				dsc.adr = 0x48;
 				dsc.wdata = wbuf;
-				dsc.wlen = 1;
-				dsc.rdata = rbuf;
-				dsc.rlen = 2;
+				dsc.wlen = 3;
+				dsc.rdata = 0;
+				dsc.rlen = 0;
 				dsc.wdata2 = 0;
 				dsc.wlen2 = 0;
 
@@ -765,68 +767,6 @@ static void UpdateHV()
 			break;
 
 		case 1:
-
-			if (dsc.ready)
-			{
-				if (dsc.ack)
-				{
-					byte *p = rbuf;
-
-					byte ch = (p[0] >> 4) & 3;
-
-					i32 res = ((p[0]<<8)|p[1]) & 0xFFF;
-
-					if (ch == 1)
-					{
-						filtFV += (res * 16 - filtFV + 8) / 16;
-
-						curFireVoltage = (filtFV * 970 + 32768) / 65536; //51869
-
-						u16 t = mv.fireVoltage;
-
-						if (t > curFireVoltage)
-						{
-							if (correction < 0x3FF)
-							{
-								correction += 1;
-							};
-						}
-						else if (t < curFireVoltage)
-						{
-							if (correction > 0)
-							{
-								correction -= 1;
-							};
-						};
-					};
-				};
-
-				i++;
-			};
-
-			break;
-
-		case 2:
-
-			wbuf[0] = 2;
-			wbuf[1] = 0;
-			wbuf[2] = 0;
-
-			dsc.adr = 0x48;
-			dsc.wdata = wbuf;
-			dsc.wlen = 3;
-			dsc.rdata = 0;
-			dsc.rlen = 0;
-			dsc.wdata2 = 0;
-			dsc.wlen2 = 0;
-
-			I2C_AddRequest(&dsc);
-
-			i++;
-
-			break;
-
-		case 3:
 
 			if (dsc.ready)
 			{
@@ -849,7 +789,7 @@ static void UpdateHV()
 
 			break;
 
-		case 4:
+		case 2:
 
 			if (dsc.ready)
 			{
@@ -872,7 +812,7 @@ static void UpdateHV()
 
 			break;
 
-		case 5:
+		case 3:
 
 			if (dsc.ready)
 			{
@@ -895,13 +835,32 @@ static void UpdateHV()
 
 			break;
 
-		case 6:
+		case 4:
 
 			if (dsc.ready)
 			{
+				curFireVoltage = GetCurFireVoltage();
+
+				u16 t = mv.fireVoltage;
+
+				if (t > curFireVoltage)
+				{
+					if (correction < 0x3FF)
+					{
+						correction += 1;
+					};
+				}
+				else if (t < curFireVoltage)
+				{
+					if (correction > 0)
+					{
+						correction -= 1;
+					};
+				};
+
 				dstFV += (i16)mv.fireVoltage - (dstFV+4)/8;
 
-				u16 t = (dstFV+4)/8;
+				t = (dstFV+4)/8;
 
 				u32 k = (0x1E00 + correction) >> 3;
 
@@ -930,7 +889,7 @@ static void UpdateHV()
 
 			break;
 
-		case 7:
+		case 5:
 
 			if (dsc.ready)
 			{

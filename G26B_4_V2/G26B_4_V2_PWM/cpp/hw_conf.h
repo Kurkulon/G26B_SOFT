@@ -116,18 +116,14 @@
 	#define MANI_TC				TC3
 	//#define 					TC4
 	//#define 					TC5
-	//#define 					TC6
-	//#define NAND_TC			TC7
 
 	#define GEN_TC0_TC1			GEN_MCK
 	#define GEN_TC2_TC3			GEN_MCK
 	#define GEN_TC4_TC5			GEN_MCK
-	#define GEN_TC6_TC7			GEN_MCK
 
 	#define CLK_TC0_TC1			GEN_MCK_CLK
 	#define CLK_TC2_TC3			GEN_MCK_CLK
 	#define CLK_TC4_TC5			GEN_MCK_CLK
-	#define CLK_TC6_TC7			GEN_MCK_CLK
 
 	#define GEN_TC0				GEN_TC0_TC1
 	#define GEN_TC1				GEN_TC0_TC1
@@ -135,8 +131,6 @@
 	#define GEN_TC3				GEN_TC2_TC3
 	#define GEN_TC4				GEN_TC4_TC5
 	#define GEN_TC5				GEN_TC4_TC5
-	#define GEN_TC6				GEN_TC6_TC7
-	#define GEN_TC7				GEN_TC6_TC7
 
 	#define GCLK_TC0			GCLK_TC0_TC1
 	#define GCLK_TC1			GCLK_TC0_TC1
@@ -144,8 +138,6 @@
 	#define GCLK_TC3			GCLK_TC2_TC3
 	#define GCLK_TC4			GCLK_TC4_TC5
 	#define GCLK_TC5			GCLK_TC4_TC5
-	#define GCLK_TC6			GCLK_TC6_TC7
-	#define GCLK_TC7			GCLK_TC6_TC7
 
 	#define CLK_TC0				CLK_TC0_TC1
 	#define CLK_TC1				CLK_TC0_TC1
@@ -153,8 +145,6 @@
 	#define CLK_TC3				CLK_TC2_TC3
 	#define CLK_TC4				CLK_TC4_TC5
 	#define CLK_TC5				CLK_TC4_TC5
-	#define CLK_TC6				CLK_TC6_TC7
-	#define CLK_TC7				CLK_TC6_TC7
 
 	// ++++++++++++++	TCC	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -258,6 +248,17 @@
 
 	#define UART0_GEN_SRC		GEN_MCK
 	#define UART0_GEN_CLK		GEN_MCK_CLK
+
+	// ++++++++++++++	ADC		++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+	#define PIO_ADC300			HW::PIOA
+	#define PIO_ADCWFB			HW::PIOB
+
+	#define PIN_ADC300			7 
+	#define PIN_ADCWFB			4 
+	
+	#define ADC300				(1UL<<PIN_ADC300	) 
+	#define ADCWFB				(1UL<<PIN_ADCWFB	) 
 
 	// ++++++++++++++	PWM		++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

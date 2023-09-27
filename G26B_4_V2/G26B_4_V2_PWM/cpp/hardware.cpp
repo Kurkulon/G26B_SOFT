@@ -613,8 +613,6 @@ static void Init_WaveFormGen()
 	DACTC_ClockEnable();
 
 	HW::GCLK->PCHCTRL[GCLK_DAC] = GEN_MCK|GCLK_CHEN; 
-	HW::GCLK->PCHCTRL[GCLK_ADC0] = GEN_MCK|GCLK_CHEN; 
-	HW::MCLK->ClockEnable(PID_ADC0); 
 	HW::MCLK->ClockEnable(PID_DAC); 
 
 	PIO_GEN->DIRSET		= GENA|GENB;
@@ -650,6 +648,47 @@ static void Init_WaveFormGen()
 	//DACTC->CTRLA |= TC_ENABLE;
 	//DACTC->CTRLBSET = TC_CMD_RETRIGGER;
 
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+static void Init_ADC()
+{
+	HW::GCLK->PCHCTRL[GCLK_ADC0] = GEN_MCK|GCLK_CHEN; 
+	HW::GCLK->PCHCTRL[GCLK_ADC1] = GEN_MCK|GCLK_CHEN; 
+	HW::MCLK->ClockEnable(PID_ADC0); 
+	HW::MCLK->ClockEnable(PID_ADC1); 
+
+	PIO_ADC300->SetWRCONFIG(ADC300, PORT_PMUX_B|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
+	PIO_ADCWFB->SetWRCONFIG(ADCWFB, PORT_PMUX_B|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
+
+	HW::ADC0->CTRLB = ADC_RESSEL_16BIT|ADC_FREERUN;
+	HW::ADC1->CTRLB = ADC_RESSEL_12BIT|ADC_FREERUN;
+
+	HW::ADC0->REFCTRL = ADC_REFSEL_VDDANA|ADC_REFCOMP;
+	HW::ADC1->REFCTRL = ADC_REFSEL_VDDANA|ADC_REFCOMP;
+
+	HW::ADC0->INPUTCTRL = ADC_MUXPOS_AIN7;
+	HW::ADC1->INPUTCTRL = ADC_MUXPOS_AIN6;
+
+	HW::ADC0->AVGCTRL = ADC_SAMPLENUM_1024;
+	HW::ADC1->AVGCTRL = ADC_SAMPLENUM_1;
+
+	HW::ADC0->SAMPCTRL = ADC_SAMPLEN(0);
+	HW::ADC1->SAMPCTRL = ADC_SAMPLEN(0);
+
+	HW::ADC0->CTRLA = ADC_PRESCALER_DIV16|ADC_ENABLE; 
+	HW::ADC1->CTRLA = ADC_PRESCALER_DIV16|ADC_ENABLE; 
+
+	HW::ADC0->SWTRIG = ADC_START;
+	HW::ADC1->SWTRIG = ADC_START;
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+u16 GetCurFireVoltage()
+{
+	return (HW::ADC0->RESULT * 31938) >> 22;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -724,6 +763,7 @@ void InitHardware()
 
 	EnableVCORE();
 	
+	Init_ADC();
 	Init_PWM();
 	Init_WaveFormGen();
 
