@@ -88,6 +88,8 @@ const float pi = 3.14159265358979f;
 extern u16 curFireVoltage;
 u16 waveBuffer[1000] = {0};
 
+static i16 sinArr[256] = {0};
+
 #define pwmPeriodUS 6
 //u16 waveAmp = 0;
 //u16 waveFreq = 3000; //Hz
@@ -431,7 +433,7 @@ void PrepareFire(u16 waveFreq, u16 waveAmp)
 	PIO_DRVEN->CLR(DRVEN);
 	PWMTCC->PERBUF = US2PWM(pwmPeriodUS);
 
-	if (waveFreq != prevFreq || waveAmp != prevAmp)
+	//if (waveFreq != prevFreq || waveAmp != prevAmp)
 	{
 		prevFreq = waveFreq;
 		prevAmp = waveAmp;
@@ -440,19 +442,30 @@ void PrepareFire(u16 waveFreq, u16 waveAmp)
 
 		waveAmp /= 8;
 
-		const float k = 2*pi/waveLen;
+		//const float k = 2*pi/waveLen;
 		const u16 hi = US2PWM(pwmPeriodUS-0.5);
 		const u16 mid = US2PWM(pwmPeriodUS/2);
 		const u16 lo = US2PWM(0.5);
 		const u16 FV = MAX(curFireVoltage, 25);
 		const u16 amp = (((u32)waveAmp*US2PWM(pwmPeriodUS)+FV/2)/FV+1)/2;
 
+		//for (u32 i = 0; i < waveLen; i++)
+		//{
+		//	u16 t = mid + amp*sin(i*k);		
+		//	//u16 t = mid + amp*sin(i*k)*(1-cos(i*k));
+		//	waveBuffer[i] = LIM(t, lo, hi);
+		//};
+
+		const u16 ki = 256 * ArraySize(sinArr) / waveLen;
+
 		for (u32 i = 0; i < waveLen; i++)
 		{
-			u16 t = mid + amp*sin(i*k);		
+			u16 t = mid + (amp*sinArr[(i*ki+127)>>8])/2048;		
 			//u16 t = mid + amp*sin(i*k)*(1-cos(i*k));
 			waveBuffer[i] = LIM(t, lo, hi);
 		};
+
+
 	};
 
 	PWMCOUNTTCC->PER = waveLen;
@@ -610,10 +623,8 @@ static void Init_HV()
 static void Init_WaveFormGen()
 {
 	WFG_ClockEnable();
-	DACTC_ClockEnable();
+	//DACTC_ClockEnable();
 
-	HW::GCLK->PCHCTRL[GCLK_DAC] = GEN_MCK|GCLK_CHEN; 
-	HW::MCLK->ClockEnable(PID_DAC); 
 
 	PIO_GEN->DIRSET		= GENA|GENB;
 
@@ -635,7 +646,27 @@ static void Init_WaveFormGen()
 	WFGTC->CTRLA |= TC_ENABLE;
 	WFGTC->CTRLBSET = TC_CMD_RETRIGGER;
 
-	PIO_DAC0->SetWRCONFIG(DAC0, PMUX_DAC0|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
+	PIO_DAC0->SetWRCONFIG(DAC0, PORT_PMUX_B|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
+
+	HW::GCLK->GENCTRL[GEN_DAC] = GCLK_DIV(GEN_DAC_DIV)|GCLK_SRC_DPLL0|GCLK_GENEN;
+	HW::GCLK->PCHCTRL[GCLK_DAC] = GEN_DAC|GCLK_CHEN; 
+	HW::MCLK->ClockEnable(PID_DAC); 
+
+	HW::DAC->CTRLA = DAC_SWRST;
+
+	while(HW::DAC->SYNCBUSY);
+
+	HW::DAC->CTRLB = DAC_REFSEL_VREFAU;
+	HW::DAC->EVCTRL = 0;
+	HW::DAC->INTENCLR = ~0;
+	HW::DAC->DACCTRL[0] = DAC_ENABLE|DAC_CC12M|DAC_RUNSTDBY|DAC_REFRESH(1);
+	HW::DAC->DACCTRL[1] = 0;
+	HW::DAC->CTRLA = DAC_ENABLE;
+
+	while(HW::DAC->SYNCBUSY);
+
+	HW::DAC->DATA[0] = 0x7FF;
+
 
 	//DACTC->CTRLA = DACTC_PRESC_DIV|TC_MODE_COUNT8;
 	//DACTC->WAVE = TC_WAVEGEN_NPWM;
@@ -647,6 +678,13 @@ static void Init_WaveFormGen()
 
 	//DACTC->CTRLA |= TC_ENABLE;
 	//DACTC->CTRLBSET = TC_CMD_RETRIGGER;
+
+	const float k = 2*pi/ArraySize(sinArr);
+
+	for (u32 i = 0; i < ArraySize(sinArr); i++)
+	{
+		sinArr[i] = 1861*sin(i*k);		
+	};
 
 }
 
@@ -785,6 +823,11 @@ void UpdateHardware()
 //	static TM32 tm;
 
 	I2C_Update();
+
+	static byte t = 0;
+
+	if (HW::DAC->SYNCBUSY == 0) HW::DAC->DATA[0] = sinArr[t++]+0x7ff;
+
 //	Update_PWM();
 
 	//if (tm.Check(1000))
