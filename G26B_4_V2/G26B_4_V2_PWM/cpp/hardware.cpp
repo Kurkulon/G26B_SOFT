@@ -331,6 +331,8 @@ static void WDT_Init()
 	#define WFG_PRESC_DIV				CONCAT2(TC_PRESCALER_DIV,WFG_PRESC_NUM)
 	#define US2WFG(v)					(((v)*(WFG_GEN_CLK/WFG_PRESC_NUM)+500000)/1000000)
 
+	#define WFG_EVSYS_USER				CONCAT3(EVSYS_USER_, WFG_TC, _EVU)
+
 	inline void WFG_ClockEnable()		{ HW::GCLK->PCHCTRL[GCLK_WFG] = WFG_GEN|GCLK_CHEN; HW::MCLK->ClockEnable(PID_WFG); }
 
 #else
@@ -408,6 +410,7 @@ static __irq void PwmCountIRQ()
 
 	PIO_DRVEN->CLR(DRVEN);
 	PWMTCC->CTRLBSET = TCC_CMD_STOP;
+	//WFGTC->CTRLBSET = TC_CMD_STOP;
 //	pwmStopTime = GetMilliseconds();
 	PWMCOUNTTCC->INTFLAG = ~0;
 	pwmstat = true;
@@ -421,10 +424,13 @@ static __irq void PwmCountIRQ()
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-void PrepareFire(u16 waveFreq, u16 waveAmp)
+void PrepareFire(u16 waveFreq, u16 waveAmp, bool pwm)
 {
 	static u16 prevFreq = 0;
 	static u16 prevAmp = 0;
+
+	u16 hi, mid, lo, amp;
+	volatile void *dst;
 
 	HW::PIOA->BSET(21);
 
@@ -442,30 +448,32 @@ void PrepareFire(u16 waveFreq, u16 waveAmp)
 
 		waveAmp /= 8;
 
-		//const float k = 2*pi/waveLen;
-		const u16 hi = US2PWM(pwmPeriodUS-0.5);
-		const u16 mid = US2PWM(pwmPeriodUS/2);
-		const u16 lo = US2PWM(0.5);
 		const u16 FV = MAX(curFireVoltage, 25);
-		const u16 amp = (((u32)waveAmp*US2PWM(pwmPeriodUS)+FV/2)/FV+1)/2;
 
-		//for (u32 i = 0; i < waveLen; i++)
-		//{
-		//	u16 t = mid + amp*sin(i*k);		
-		//	//u16 t = mid + amp*sin(i*k)*(1-cos(i*k));
-		//	waveBuffer[i] = LIM(t, lo, hi);
-		//};
+		if (pwm)
+		{
+			hi = US2PWM(pwmPeriodUS-0.5);
+			mid = US2PWM(pwmPeriodUS/2);
+			lo = US2PWM(0.5);
+			amp = (((u32)waveAmp*US2PWM(pwmPeriodUS)+FV/2)/FV+1)/2;
+			dst = &(PWMTCC->CCBUF[0]);
+		}
+		else
+		{
+			hi = 4095;
+			mid = 0x7FF;
+			lo = 0;
+			amp = 64;
+			dst = &(HW::DAC->DATA[0]);
+		};
 
 		const u16 ki = 256 * ArraySize(sinArr) / waveLen;
 
 		for (u32 i = 0; i < waveLen; i++)
 		{
 			u16 t = mid + (amp*sinArr[(i*ki+127)>>8])/2048;		
-			//u16 t = mid + amp*sin(i*k)*(1-cos(i*k));
 			waveBuffer[i] = LIM(t, lo, hi);
 		};
-
-
 	};
 
 	PWMCOUNTTCC->PER = waveLen;
@@ -473,7 +481,7 @@ void PrepareFire(u16 waveFreq, u16 waveAmp)
 
 	PWMTCC->CTRLA |= TCC_ENABLE;
 
-	PWM_DMA.WritePeripheral(waveBuffer, &(PWMTCC->CCBUF[0]), waveLen, DMCH_TRIGACT_BURST|PWM_DMCH_TRIGSRC, DMDSC_BEATSIZE_HWORD); 
+	PWM_DMA.WritePeripheral(waveBuffer, dst, waveLen, DMCH_TRIGACT_BURST|PWM_DMCH_TRIGSRC, DMDSC_BEATSIZE_HWORD); 
 
 	PIO_URXD0->SetWRCONFIG(URXD0, PORT_PMUX_A|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN); 
 	HW::EVSYS->CH[EVENT_PWM_SYNC].CHANNEL = (EVGEN_EIC_EXTINT_0+PWM_EXTINT)|EVSYS_PATH_ASYNCHRONOUS;
@@ -639,12 +647,14 @@ static void Init_WaveFormGen()
 	WFGTC->CC8[GENA_WO_NUM] = US2WFG(pwmPeriodUS/2); 
 	WFGTC->CC8[GENB_WO_NUM] = US2WFG(pwmPeriodUS/2); 
 
-	WFGTC->EVCTRL = 0;
+	//WFGTC->EVCTRL = TC_TCEI|TC_EVACT_RETRIGGER;
+	//HW::EVSYS->USER[WFG_EVSYS_USER] = EVENT_PWM_SYNC+1;
 
 	WFGTC->INTENCLR = ~0;
 
 	WFGTC->CTRLA |= TC_ENABLE;
 	WFGTC->CTRLBSET = TC_CMD_RETRIGGER;
+
 
 	PIO_DAC0->SetWRCONFIG(DAC0, PORT_PMUX_B|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
 
@@ -824,9 +834,9 @@ void UpdateHardware()
 
 	I2C_Update();
 
-	static byte t = 0;
+	//static byte t = 0;
 
-	if (HW::DAC->SYNCBUSY == 0) HW::DAC->DATA[0] = sinArr[t++]+0x7ff;
+	if (HW::DAC->SYNCBUSY == 0 && pwmstat) HW::DAC->DATA[0] = /*sinArr[t++]+*/0x7ff;
 
 //	Update_PWM();
 
