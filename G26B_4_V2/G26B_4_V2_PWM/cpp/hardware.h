@@ -53,35 +53,35 @@ extern u16 GetCurFireVoltage();
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-__forceinline u32 Push_IRQ()
-{
-	register u32 t;
-
-#ifndef WIN32
-
-	register u32 primask __asm("primask");
-
-	t = primask;
-
-	__disable_irq();
-
-#endif
-
-	return t;
-}
+//__forceinline u32 Push_IRQ()
+//{
+//	register u32 t;
+//
+//#ifndef WIN32
+//
+//	register u32 primask __asm("primask");
+//
+//	t = primask;
+//
+//	__disable_irq();
+//
+//#endif
+//
+//	return t;
+//}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-__forceinline void Pop_IRQ(u32 t)
-{
-#ifndef WIN32
-
-	register u32 primask __asm("primask");
-
-	primask = t;
-
-#endif
-}
+//__forceinline void Pop_IRQ(u32 t)
+//{
+//#ifndef WIN32
+//
+//	register u32 primask __asm("primask");
+//
+//	primask = t;
+//
+//#endif
+//}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

@@ -99,8 +99,8 @@ u16 curFireVoltage = 300;
 //const u16 dspReqWord = 0xA900;
 //const u16 dspReqMask = 0xFF00;
 
-static u16 manReqWord = 0xA800;
-static u16 manReqMask = 0xFF00;
+static const u16 manReqWord = 0xA700;
+static const u16 manReqMask = 0xFF00;
 
 //static u16 memReqWord = 0x3E00;
 //static u16 memReqMask = 0xFF00;
@@ -259,21 +259,9 @@ static u32 InitRspMan_10(__packed u16 *data)
 	__packed u16 *start = data;
 
 	*(data++)	= (manReqWord & manReqMask) | 0x10;		//	1. ответное слово
-	*(data++)	= 0;									//	2. И1И2П1П2. КУ
-	*(data++)	= 0;									//	3. И1И2П1П2. Шаг оцифровки
-	*(data++)	= 0;									//	4. И1И2П1П2. Длина оцифровки
-	*(data++)	= 0; 									//	5. И1И2П1П2. Задержка оцифровки
-	*(data++)	= 0;									//	6. И1И2П1П2. Фильтр
-	*(data++)	= 0;									//	7. И1И2П1П2. Упаковка
-	*(data++)	= 0;									//	8. И3П1П2. КУ
-	*(data++)	= 0;									//	9. И3П1П2. Шаг оцифровки
-	*(data++)	= 0;									//	10. И3П1П2. Длина оцифровки
-	*(data++)	= 0;									//	11. И3П1П2. Задержка оцифровки
-	*(data++)	= 0;									//	12. И3П1П2. Фильтр
-	*(data++)	= 0;									//	13. И3П1П2. Упаковка
-	*(data++)	= mv.fireVoltage;						//	14. И3П1П2. Напряжение излучателя (0...300 В)
-	*(data++)	= mv.freq;								//	15. И3П1П2. Частота излучателя (1000...30000 Гц)
-	*(data++)	= mv.fireAmp;							//	16. И3П1П2. Амплитуда излучателя (0...3000 В)
+	*(data++)	= mv.fireVoltage;						//	2. И3П1П2П3П4. Напряжение излучателя (0...300 В)
+	*(data++)	= mv.freq;								//	3. И3П1П2П3П4. Частота излучателя (1000...30000 Гц)
+	*(data++)	= mv.fireAmp;							//	4. И3П1П2П3П4. Амплитуда излучателя (0...3000 В)
 
 	return data - start;
 }
@@ -301,14 +289,9 @@ static u32 InitRspMan_20(u16 *req, __packed u16 *data)
 	__packed u16 *start = data;
 
 	*(data++)	= req[0];				//1. ответное слово
-	*(data++)	= 0;					//2-3. счётчик срабатываний
-	*(data++)	= 0;					//2-3. счётчик срабатываний
-	*(data++)	= 0;					//4. Температура в приборе(0.1гр) (short)
-	*(data++)  	= 0;					//5. Статус
-	*(data++)  	= 0;					//6. Счётчик ошибок И3П1П2 по RS485
-	*(data++)  	= curFireVoltage;		//7. Напряжение излучателя измеренное И3П1П2 (В)
-	*(data++)  	= mv.fireAmp;			//8. Аплитуда излучателя измеренная И3П1П2 (В)
-	*(data++)	= temp; 				//9. Температура излучателя измеренная И3П1П2(0.1гр) (short)
+	*(data++)  	= curFireVoltage;		//2. Напряжение излучателя измеренное И3П1П2 (В)
+	*(data++)  	= mv.fireAmp;			//3. Аплитуда излучателя измеренная И3П1П2 (В)
+	*(data++)	= temp; 				//4. Температура излучателя измеренная И3П1П2(0.1гр) (short)
 
 	return data - start;
 }
@@ -331,36 +314,52 @@ static bool RequestMan_20(u16 *data, u16 len, MTB* mtb)
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+static bool RequestMan_40(u16 *data, u16 len, MTB* mtb)
+{
+	if (data == 0 || len == 0 || len > 3 || mtb == 0) return false;
+
+	manTrmData[0] = data[0];
+
+	mtb->data1 = manTrmData;
+	mtb->len1 = 1;
+	mtb->data2 = 0;
+	mtb->len2 = 0;
+
+	return true;
+}
+
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-//static bool RequestMan_80(u16 *data, u16 len, MTB* mtb)
-//{
-//	if (data == 0 || len < 3 || len > 4 || mtb == 0) return false;
-//
-//	switch (data[1])
-//	{
-//		case 1:
-//
-//			mv.numDevice = data[2];
-//
-//			break;
-//
-//		case 2:
-//
-//			manTrmBaud = data[2] - 1;	//SetTrmBoudRate(data[2]-1);
-//
-//			break;
-//	};
-//
-//	manTrmData[0] = (manReqWord & manReqMask) | 0x80;
-//
-//	mtb->data1 = manTrmData;
-//	mtb->len1 = 1;
-//	mtb->data2 = 0;
-//	mtb->len2 = 0;
-//
-//	return true;
-//}
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+static bool RequestMan_80(u16 *data, u16 len, MTB* mtb)
+{
+	if (data == 0 || len < 3 || len > 4 || mtb == 0) return false;
+
+	switch (data[1])
+	{
+		case 1:
+
+			mv.numDevice = data[2];
+
+			break;
+
+		case 2:
+
+			manTrmBaud = data[2] - 1;	//SetTrmBoudRate(data[2]-1);
+
+			break;
+	};
+
+	manTrmData[0] = (manReqWord & manReqMask) | 0x80;
+
+	mtb->data1 = manTrmData;
+	mtb->len1 = 1;
+	mtb->data2 = 0;
+	mtb->len2 = 0;
+
+	return true;
+}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -370,9 +369,9 @@ static bool RequestMan_90(u16 *data, u16 len, MTB* mtb)
 
 	switch(data[1])
 	{
-		case 0x17:	mv.fireVoltage		= MIN(data[2], 300);			break;
-		case 0x18:	mv.freq				= LIM(data[2], 2000, 10000);	break;
-		case 0x19:	mv.fireAmp			= MIN(data[2], 1500);			break;
+		case 0x00:	mv.fireVoltage		= MIN(data[2], 300);			break;	//	0x00 - И3П1П2П3П4. напряжение излучателя (0...300 вольт)
+		case 0x01:	mv.freq				= LIM(data[2], 2000, 10000);	break;	//	0x01 - И3П1П2П3П4. частота излучателя (1000...30000 Гц)
+		case 0x02:	mv.fireAmp			= MIN(data[2], 1500);			break;	//	0x02 - И3П1П2П3П4. амплитуда излучателя (0...3000 вольт)
 
 		default:
 
@@ -413,6 +412,8 @@ static bool RequestMan(u16 *buf, u16 len, MTB* mtb)
 {
 	if (buf == 0 || len == 0 || mtb == 0) return false;
 
+	if ((buf[0] & manReqMask) != manReqWord) return false;
+
 	bool r = false;
 
 	byte i = (buf[0]>>4)&0xF;
@@ -423,7 +424,7 @@ static bool RequestMan(u16 *buf, u16 len, MTB* mtb)
 		case 1: 	r = RequestMan_10(buf, len, mtb); break;
 		case 2: 	r = RequestMan_20(buf, len, mtb); break;
 //		case 3:		r = RequestMan_30(buf, len, mtb); break;
-//		case 8: 	r = RequestMan_80(buf, len, mtb); break;
+		case 8: 	r = RequestMan_80(buf, len, mtb); break;
 		case 9:		r = RequestMan_90(buf, len, mtb); break;
 		case 0xF:	r = RequestMan_F0(buf, len, mtb); break;
 	};
