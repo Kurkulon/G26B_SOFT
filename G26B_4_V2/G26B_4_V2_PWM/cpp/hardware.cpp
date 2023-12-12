@@ -741,6 +741,8 @@ u16 GetCurFireVoltage()
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 void InitHardware()
 {
 	SEGGER_RTT_WriteString(0, RTT_CTRL_TEXT_BRIGHT_YELLOW "Hardware Init ... \n");
@@ -805,9 +807,9 @@ void InitHardware()
 
 #ifndef WIN32
 
-	//InitManRecieve();
+	InitManRecieve();
 
-	//InitManTransmit();
+	InitManTransmit();
 
 	EnableVCORE();
 	

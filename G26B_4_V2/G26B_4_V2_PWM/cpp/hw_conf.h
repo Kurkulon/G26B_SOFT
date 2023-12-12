@@ -84,7 +84,7 @@
 	//#define SERCOM_1			1
 	#define I2C_SERCOM_NUM		2
 	#define UART0_SERCOM_NUM	3
-	//#define SERCOM_4			4
+	//#define MAN_SERCOM_NUM		4
 	//#define SERCOM_5			5
 	//#define SERCOM_6			6
 	//#define SERCOM_7			7
@@ -222,7 +222,13 @@
 	#define Pin_ManTrmIRQ_Clr()		HW::PIOB->BCLR(10)		
 
 	#define Pin_ManRcvSync_Set()	HW::PIOB->BSET(12)		
-	#define Pin_ManRcvSync_Clr()	HW::PIOB->BCLR(12)		
+	#define Pin_ManRcvSync_Clr()	HW::PIOB->BCLR(12)	
+
+	#define PIO_MAN			HW::PIOB
+	#define PIN_MAN			8 
+	#define PMUX_MAN		PORT_PMUX_D
+	#define MAN_DOPO		SPI_DOPO(0)
+
 
 	// ++++++++++++++	VCORE	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

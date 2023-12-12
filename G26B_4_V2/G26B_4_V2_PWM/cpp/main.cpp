@@ -43,11 +43,9 @@ __packed struct MainVars // NonVolatileVars
 	u32 timeStamp;
 
 	u16 numDevice;
-	u16 numMemDevice;
 
-	u16 freq;
 	u16 fireVoltage;
-	u16 fireAmp;
+	u16 fireType;
 };
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -76,7 +74,7 @@ u32 i2cResetCount = 0;
 
 //static u16 manBuf[16];
 
-//static u16 manRcvData[10];
+static u16 manRcvData[10];
 static u16 manTrmData[50];
 static u16 manTrmBaud = 0;
 //static u16 memTrmBaud = 0;
@@ -185,46 +183,6 @@ extern u16 GetVersionDevice()
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-//static void Response_0(u16 rw, MTB &mtb)
-//{
-//	__packed struct Rsp {u16 rw; u16 device; u16 session; u32 rcvVec; u32 rejVec; u32 wrVec; u32 errVec; u16 wrAdr[3]; u16 numDevice; u16 version; u16 temp; byte status; byte flags; RTC rtc; };
-//
-//	Rsp &rsp = *((Rsp*)&txbuf);
-//
-//	rsp.rw = rw;
-//	rsp.device = GetDeviceID();  
-//	rsp.session = FLASH_Session_Get();	  
-//	rsp.rcvVec =  FLASH_Vectors_Recieved_Get();
-//	rsp.rejVec = FLASH_Vectors_Rejected_Get();
-//	rsp.wrVec = FLASH_Vectors_Saved_Get();
-//	rsp.errVec = FLASH_Vectors_Errors_Get();
-//	*((__packed u64*)rsp.wrAdr) = FLASH_Current_Adress_Get();
-//	rsp.temp = temp*5/2;
-//	rsp.status = FLASH_Status();
-//
-//	GetTime(&rsp.rtc);
-//
-//	mtb.data1 = txbuf;
-//	mtb.len1 = sizeof(rsp)/2;
-//	mtb.data2 = 0;
-//	mtb.len2 = 0;
-//}
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-//static void InitRmemList()
-//{
-//	for (u16 i = 0; i < ArraySize(r02); i++)
-//	{
-//		freeR01.Add(&r02[i]);
-//	};
-//}
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 static u32 InitRspMan_00(__packed u16 *data)
 {
 	__packed u16 *start = data;
@@ -259,9 +217,8 @@ static u32 InitRspMan_10(__packed u16 *data)
 	__packed u16 *start = data;
 
 	*(data++)	= (manReqWord & manReqMask) | 0x10;		//	1. ответное слово
-	*(data++)	= mv.fireVoltage;						//	2. И3П1П2П3П4. Напряжение излучателя (0...300 В)
-	*(data++)	= mv.freq;								//	3. И3П1П2П3П4. Частота излучателя (1000...30000 Гц)
-	*(data++)	= mv.fireAmp;							//	4. И3П1П2П3П4. Амплитуда излучателя (0...3000 В)
+	*(data++)	= mv.fireVoltage;						//	2. Напряжение излучателя (0...300 В)
+	*(data++)	= mv.fireType;							//	3. Формирование излучения (тип, 0,1,2.. )
 
 	return data - start;
 }
@@ -288,10 +245,15 @@ static u32 InitRspMan_20(u16 *req, __packed u16 *data)
 {
 	__packed u16 *start = data;
 
-	*(data++)	= req[0];				//1. ответное слово
-	*(data++)  	= curFireVoltage;		//2. Напряжение излучателя измеренное И3П1П2 (В)
-	*(data++)  	= mv.fireAmp;			//3. Аплитуда излучателя измеренная И3П1П2 (В)
-	*(data++)	= temp; 				//4. Температура излучателя измеренная И3П1П2(0.1гр) (short)
+	*(data++)	= (manReqWord & manReqMask) | 0x20;	//	1. Ответное слово			
+	*(data++)  	= 0;								//	2. Номер излучателя (0,1...)			
+	*(data++)  	= curFireVoltage;					//	3. Напряжение излучателя измеренное (В)
+	*(data++)  	= 0;								//	4. Аплитуда излучателя измеренная (В)
+	*(data++)	= temp; 							//	5. Температура излучателя измеренная (0.1гр) (short)
+	*(data++)  	= 20;								//	6. Шаг, мкс
+	*(data++)  	= 32;								//	7. Длина, отсч
+	*(data++)  	= 0;								//	8. Задержка мкс
+	data		+= 32; 								//	9-?. данные (до 128шт)
 
 	return data - start;
 }
@@ -311,24 +273,6 @@ static bool RequestMan_20(u16 *data, u16 len, MTB* mtb)
 
 	return true;
 }
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-static bool RequestMan_40(u16 *data, u16 len, MTB* mtb)
-{
-	if (data == 0 || len == 0 || len > 3 || mtb == 0) return false;
-
-	manTrmData[0] = data[0];
-
-	mtb->data1 = manTrmData;
-	mtb->len1 = 1;
-	mtb->data2 = 0;
-	mtb->len2 = 0;
-
-	return true;
-}
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -369,9 +313,8 @@ static bool RequestMan_90(u16 *data, u16 len, MTB* mtb)
 
 	switch(data[1])
 	{
-		case 0x00:	mv.fireVoltage		= MIN(data[2], 300);			break;	//	0x00 - И3П1П2П3П4. напряжение излучателя (0...300 вольт)
-		case 0x01:	mv.freq				= LIM(data[2], 2000, 10000);	break;	//	0x01 - И3П1П2П3П4. частота излучателя (1000...30000 Гц)
-		case 0x02:	mv.fireAmp			= MIN(data[2], 1500);			break;	//	0x02 - И3П1П2П3П4. амплитуда излучателя (0...3000 вольт)
+		case 0x00:	mv.fireVoltage		= MIN(data[2], 300);	break;	//	0x00. Напряжение излучателя (0...300 вольт)
+		case 0x01:	mv.fireType			= MIN(data[2], 1);		break;	//	0x01. Формирование излучения (тип, 0,1,2.. )
 
 		default:
 
@@ -423,7 +366,6 @@ static bool RequestMan(u16 *buf, u16 len, MTB* mtb)
 		case 0: 	r = RequestMan_00(buf, len, mtb); break;
 		case 1: 	r = RequestMan_10(buf, len, mtb); break;
 		case 2: 	r = RequestMan_20(buf, len, mtb); break;
-//		case 3:		r = RequestMan_30(buf, len, mtb); break;
 		case 8: 	r = RequestMan_80(buf, len, mtb); break;
 		case 9:		r = RequestMan_90(buf, len, mtb); break;
 		case 0xF:	r = RequestMan_F0(buf, len, mtb); break;
@@ -437,82 +379,77 @@ static bool RequestMan(u16 *buf, u16 len, MTB* mtb)
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-//static void UpdateMan()
-//{
-//	static MTB mtb;
-//	static MRB mrb;
-//
-//	static byte i = 0;
-//
-//	static RTM tm;
-//
-//
-////	u16 c;
-//
-//	switch (i)
-//	{
-//		case 0:
-//
-////			HW::P5->BSET(7);
-//
-//			mrb.data = manRcvData;
-//			mrb.maxLen = ArraySize(manRcvData);
-//			RcvManData(&mrb);
-//
-//			i++;
-//
-//			break;
-//
-//		case 1:
-//
-//			ManRcvUpdate();
-//
-//			if (mrb.ready)
-//			{
-//				tm.Reset();
-//
-//				if (mrb.OK && mrb.len > 0 && ((manRcvData[0] & manReqMask) == manReqWord && RequestMan(manRcvData, mrb.len, &mtb)))
-//				{
-//					i++;
-//				}
-//				else
-//				{
-//					i = 0;
-//				};
-//			}
-//			else if (mrb.len > 0)
-//			{
-//
-//			};
-//
-//			break;
-//
-//		case 2:
-//
-//			if (tm.Check(US2RT(100)))
-//			{
-//				//manTrmData[0] = 1;
-//				//manTrmData[1] = 0;
-//				//mtb.len1 = 2;
-//				//mtb.data1 = manTrmData;
-//				SendManData(&mtb);
-//
-//				i++;
-//			};
-//
-//			break;
-//
-//		case 3:
-//
-//			if (mtb.ready)
-//			{
-//				i = 0;
-//			};
-//
-//			break;
-//
-//	};
-//}
+static void UpdateMan()
+{
+	static MTB mtb;
+	static MRB mrb;
+
+	static byte i = 0;
+
+	static RTM tm;
+
+//	u16 c;
+
+	switch (i)
+	{
+		case 0:
+
+//			HW::P5->BSET(7);
+
+			mrb.data = manRcvData;
+			mrb.maxLen = ArraySize(manRcvData);
+			RcvManData(&mrb);
+
+			i++;
+
+			break;
+
+		case 1:
+
+			ManRcvUpdate();
+
+			if (mrb.ready)
+			{
+				tm.Reset();
+
+				if (mrb.OK && mrb.len > 0 && ((manRcvData[0] & manReqMask) == manReqWord && RequestMan(manRcvData, mrb.len, &mtb)))
+				{
+					i++;
+				}
+				else
+				{
+					i = 0;
+				};
+			}
+			else if (mrb.len > 0)
+			{
+
+			};
+
+			break;
+
+		case 2:
+
+			if (tm.Check(US2RT(200)))
+			{
+				SendManData(&mtb);
+
+				i++;
+			};
+
+			break;
+
+		case 3:
+
+			if (mtb.ready)
+			{
+				i = 0;
+			};
+
+			break;
+
+	};
+}
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -540,14 +477,14 @@ static void UpdateCom()
 
 			if (!comdsp.Update())
 			{
-				if (rb.recieved && rb.len > 0)
+				if (rb.recieved && rb.len >= 6)
 				{
 					ctm.Reset();
 
-					if (RequestMan(buf, rb.len/2, &mtb))
+					if ((buf[0] & 0xFFF0) == (manReqWord|0x20) && buf[1] >= 1000 && buf[1] <= 30000 && buf[2] <= 3000)
 					{
-						wb.data = (void*)mtb.data1;
-						wb.len = mtb.len1*2;
+						wb.data = buf;
+						wb.len = 2;
 						comdsp.Write(&wb);
 						i++;
 					}
@@ -568,14 +505,14 @@ static void UpdateCom()
 
 			if (!comdsp.Update())
 			{
-				i = ((buf[0]&0xF4) == 0x24) ? (i+1) : 0;
+				i++;
 			};
 
 			break;
 
 		case 3:
 
-			PrepareFire(mv.freq, mv.fireAmp, true);
+			PrepareFire(buf[1], buf[2], true);
 
 			i++;
 
@@ -925,10 +862,8 @@ static void UpdateHV()
 static void InitMainVars()
 {
 	mv.numDevice		= 0;
-	mv.numMemDevice		= 0;
-	mv.freq				= 3000; 
-	mv.fireAmp			= 0;
 	mv.fireVoltage		= 0;
+	mv.fireType			= 0;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1060,9 +995,8 @@ static void UpdateParams()
 	enum C { S = (__LINE__+3) };
 	switch(i++)
 	{
-		CALL( MainMode()				);
+		CALL( UpdateMan(); 				);
 		CALL( UpdateTemp()				);
-		CALL( UpdateCom(); 				);
 		CALL( SaveVars();				);
 		CALL( UpdateHV();				);
 	};
@@ -1083,6 +1017,7 @@ static void UpdateMisc()
 	enum C { S = (__LINE__+3) };
 	switch(i++)
 	{
+		CALL( UpdateCom(); 		);
 		CALL( UpdateHardware();	);
 		CALL( UpdateParams();	);
 	};
@@ -1159,7 +1094,7 @@ int main()
 		{
 			fps = fc; fc = 0; 
 
-			PrepareFire(mv.freq, mv.fireAmp, false);
+			PrepareFire(3000, 1000, false);
 
 #ifdef WIN32
 
