@@ -471,7 +471,7 @@ void PrepareFire(u16 waveFreq, u16 waveAmp, bool pwm)
 
 		for (u32 i = 0; i < waveLen; i++)
 		{
-			u16 t = mid + (amp*sinArr[(i*ki+127)>>8])/2048;		
+			i16 t = mid + (amp*sinArr[(i*ki+127)>>8])/2048;		
 			waveBuffer[i] = LIM(t, lo, hi);
 		};
 	};
@@ -485,7 +485,7 @@ void PrepareFire(u16 waveFreq, u16 waveAmp, bool pwm)
 
 	PIO_URXD0->SetWRCONFIG(URXD0, PORT_PMUX_A|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN); 
 	HW::EVSYS->CH[EVENT_PWM_SYNC].CHANNEL = (EVGEN_EIC_EXTINT_0+PWM_EXTINT)|EVSYS_PATH_ASYNCHRONOUS;
-	HW::EVSYS->SWEVT = 1;
+	//HW::EVSYS->SWEVT = 1;
 
 	HW::PIOA->BCLR(21);
 }
@@ -514,7 +514,7 @@ static void Init_PWM()
 
 	PWMTCC->CTRLA = PWM_PRESC_DIV;
 	PWMTCC->WAVE = TCC_WAVEGEN_NPWM|TCC_SWAP0;
-	PWMTCC->DRVCTRL = TCC_NRE0|TCC_NRE1|TCC_NRE4|TCC_NRE5|TCC_NRV4|TCC_NRV5;//(TCC_INVEN0 << PWMHA_WO_NUM)|(TCC_INVEN0 << PWMHB_WO_NUM);
+	PWMTCC->DRVCTRL = TCC_NRE0|TCC_NRE1|TCC_NRE4|TCC_NRE5|TCC_NRV0|TCC_NRV1;//(TCC_INVEN0 << PWMHA_WO_NUM)|(TCC_INVEN0 << PWMHB_WO_NUM);
 	PWMTCC->WEXCTRL = 0x01010F02;
 	PWMTCC->PER = US2PWM(pwmPeriodUS)-1;
 	PWMTCC->CCBUF[0] = US2PWM(pwmPeriodUS/2); 

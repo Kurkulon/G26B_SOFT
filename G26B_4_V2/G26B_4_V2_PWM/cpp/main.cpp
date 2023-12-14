@@ -512,7 +512,7 @@ static void UpdateCom()
 
 		case 3:
 
-			PrepareFire(buf[1], buf[2], true);
+			PrepareFire(buf[1], buf[2], mv.fireType == 0);
 
 			i++;
 
@@ -1094,7 +1094,7 @@ int main()
 		{
 			fps = fc; fc = 0; 
 
-			PrepareFire(3000, 1000, false);
+			//PrepareFire(3000, 1000, false);
 
 #ifdef WIN32
 
