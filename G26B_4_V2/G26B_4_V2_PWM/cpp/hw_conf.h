@@ -102,6 +102,7 @@
 	#define	I2C_DMACH				DMA_CH7
 	//#define	DSP_DMATX			DMA_CH8
 	//#define	DSP_DMARX			DMA_CH9
+	#define	ADC_DMA					DMA_CH30
 	#define	CRC_DMA					DMA_CH31
 
 	// ++++++++++++++	EVENT 0...31	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -154,7 +155,7 @@
 
 	#define PWM_TCC				TCC0
 	#define MANR_TCC			TCC1
-	//#define PWMDMA_TCC			TCC2
+	#define ADC_TCC				TCC2
 	#define PWMCOUNT_TCC		TCC3
 	#define MANT_TCC			TCC4
 
@@ -295,10 +296,10 @@
 	#define PIN_PWMLB			9
 	#define PIN_PWMHA			10
 	#define PIN_PWMHB			11
-	#define PIN_POLWLA			0
-	#define PIN_POLWHA			1
-	#define PIN_POLWLB			2
-	#define PIN_POLWHB			3
+	#define PIN_POLWLA			2
+	#define PIN_POLWHA			3
+	#define PIN_POLWLB			0
+	#define PIN_POLWHB			1
 	#define PIN_GENA			31
 	#define PIN_GENB			30
 	#define PIN_DAC0			2

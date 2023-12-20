@@ -54,25 +54,7 @@ static MainVars mv;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-u32 req40_count1 = 0;
-u32 req40_count2 = 0;
-u32 req40_count3 = 0;
-
 u32 fps;
-i16 tempClock = 0;
-i16 cpu_temp = 0;
-u32 i2cResetCount = 0;
-
-//inline u16 ReverseWord(u16 v) { __asm	{ rev16 v, v };	return v; }
-
-//static void* eepromData = 0;
-//static u16 eepromWriteLen = 0;
-//static u16 eepromReadLen = 0;
-//static u16 eepromStartAdr = 0;
-
-//static MTB mtb;
-
-//static u16 manBuf[16];
 
 static u16 manRcvData[10];
 static u16 manTrmData[50];
@@ -81,77 +63,18 @@ static u16 manTrmBaud = 0;
 
 u16 txbuf[128 + 512 + 16];
 
-
-//static u16 mode = 0;
-
-//static TM32 imModeTimeout;
-
-//static u16 motoRcvCount = 0;
-
-u16 curFireVoltage = 300;
-//u16 dstFireVoltage = 0;
-
-//static u32 dspMMSEC = 0;
-//static u32 shaftMMSEC = 0;
-
-//const u16 dspReqWord = 0xA900;
-//const u16 dspReqMask = 0xFF00;
+static u16 curFireVoltage = 300;
 
 static const u16 manReqWord = 0xA700;
 static const u16 manReqMask = 0xFF00;
 
-//static u16 memReqWord = 0x3E00;
-//static u16 memReqMask = 0xFF00;
-
-//static u16 numDevice = 0;
 static u16 verDevice = VERSION;
 
-//static u16 numMemDevice = 0;
-//static u16 verMemDevice = 0x100;
-
-//static u32 manCounter = 0;
-//static u32 fireCounter = 0;
-
-//static byte mainModeState = 0;
-//static byte dspStatus = 0;
-
-//static bool cmdWriteStart_00 = false;
-//static bool cmdWriteStart_10 = false;
-//static bool cmdWriteStart_20 = false;
-
-//static u32 dspRcv40 = 0;
-//static u32 dspRcv50 = 0;
-//static u16 dspRcvCount = 0;
-//static u16 dspRcv30 = 0;
-//static u16 dspRcv01 = 0;
-
-
-//static u32 rcvCRCER = 0;
-
-//static u32 chnlCount[4] = {0};
-
-//static u32 crcErr02 = 0;
-//static u32 crcErr03 = 0;
-//static u32 crcErr06 = 0;
-//static u32 wrtErr06 = 0;
-
-//static u32 notRcv02 = 0;
-//static u32 lenErr02 = 0;
-
-//static i16 ax = 0, ay = 0, az = 0, at = 0;
-i16 temperature = 0;
-i16 cpuTemp = 0;
 i16 temp = 0;
 
 static byte svCount = 0;
 
-
-//struct AmpTimeMinMax { bool valid; u16 ampMax, ampMin, timeMax, timeMin; };
-
-//static AmpTimeMinMax sensMinMax[2] = { {0, 0, ~0, 0, ~0}, {0, 0, ~0, 0, ~0} };
-//static AmpTimeMinMax sensMinMaxTemp[2] = { {0, 0, ~0, 0, ~0}, {0, 0, ~0, 0, ~0} };
-
-//static u32 testDspReqCount = 0;
+static Rsp20 *curRsp20 = 0;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -241,33 +164,47 @@ static bool RequestMan_10(u16 *data, u16 len, MTB* mtb)
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-static u32 InitRspMan_20(u16 *req, __packed u16 *data)
-{
-	__packed u16 *start = data;
-
-	*(data++)	= (manReqWord & manReqMask) | 0x20;	//	1. Ответное слово			
-	*(data++)  	= 0;								//	2. Номер излучателя (0,1...)			
-	*(data++)  	= curFireVoltage;					//	3. Напряжение излучателя измеренное (В)
-	*(data++)  	= 0;								//	4. Аплитуда излучателя измеренная (В)
-	*(data++)	= temp; 							//	5. Температура излучателя измеренная (0.1гр) (short)
-	*(data++)  	= 20;								//	6. Шаг, мкс
-	*(data++)  	= 32;								//	7. Длина, отсч
-	*(data++)  	= 0;								//	8. Задержка мкс
-	data		+= 32; 								//	9-?. данные (до 128шт)
-
-	return data - start;
-}
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 static bool RequestMan_20(u16 *data, u16 len, MTB* mtb)
 {
 	if (data == 0 || len == 0 || len > 2 || mtb == 0) return false;
 
-	len = InitRspMan_20(data, manTrmData);
+	curRsp20 = GetReadyRsp20();
+	
+	if (curRsp20 == 0)
+	{
+		manTrmData[0] = data[0];		//	1. Ответное слово	
 
-	mtb->data1 = manTrmData;
-	mtb->len1 = len;
+		mtb->data1 = manTrmData;
+		mtb->len1 = 1;
+	}
+	else
+	{
+		Rsp20 &rsp = *curRsp20;
+
+		rsp.hdr.rw = data[0];							//	1. Ответное слово	
+		rsp.hdr.amp = 0;								//	4. Аплитуда излучателя измеренная (В)
+		rsp.hdr.temp = temp;							//	5. Температура излучателя измеренная (0.1гр) (short)
+
+		mtb->data1 = &rsp.hdr.rw;
+
+		data = rsp.data;
+
+		i16 amp = 0;
+
+		for (u16 i = 0; i < rsp.osc.sl; i++, data++)
+		{
+			i16 t = data[0]-0x7FF;
+			t = t * 5 / 4;
+			data[0] = t;
+
+			if (t > amp) amp = t;
+		};
+
+		rsp.hdr.amp = amp;
+
+		mtb->len1 = sizeof(rsp.hdr)/2 + ((rsp.hdr.rw&1) ? (sizeof(rsp.osc)/2 + curRsp20->osc.sl) : 0);
+	};
+
 	mtb->data2 = 0;
 	mtb->len2 = 0;
 
@@ -443,6 +380,8 @@ static void UpdateMan()
 
 			if (mtb.ready)
 			{
+				if (curRsp20 != 0) FreeRsp20(curRsp20), curRsp20 = 0;
+
 				i = 0;
 			};
 
@@ -512,7 +451,7 @@ static void UpdateCom()
 
 		case 3:
 
-			PrepareFire(buf[1], buf[2], mv.fireType == 0);
+			PrepareFire(buf[0]&15, buf[1], buf[2], mv.fireType == 0);
 
 			i++;
 

@@ -13,31 +13,48 @@
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#define UNIBUF_LEN (3072)
-
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//
-//struct UNIBUF : public PtrItem<UNIBUF>
+//struct HdrRsp20
 //{
-//	UNIBUF() : dataOffset(sizeof(VecData::Hdr)), dataLen(0)  { /*freeBufList.Add(this);*/ }
-//
-//	u16		dataOffset;
-//	u16 	dataLen;
-//
-//	byte	data[UNIBUF_LEN]; // Последние 2 байта CRC16
-//
-//	void*	GetDataPtr() { return data+dataOffset; }
+//	u16		rw;
+//	u16		fireNum;
+//	u16		voltage;
+//	u16		amp;
+//	u16		temp;
+//	u16		st;
+//	u16		sl;
+//	u16		sd;
 //};
-//
-////++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-extern void PrepareFire(u16 waveFreq, u16 waveAmp, bool pwm);
+struct Rsp20
+{
+	Rsp20		*next;
 
-//extern u16 CRC_CCITT_PIO(const void *data, u32 len, u16 init = ~0);
-//extern u16 CRC_CCITT_DMA(const void *data, u32 len, u16 init = ~0);
-//extern bool CRC_CCITT_DMA_Async(const void* data, u32 len, u16 init = ~0);
-//extern bool CRC_CCITT_DMA_CheckComplete(u16* crc);
+	struct
+	{
+		u16		rw;
+		u16		fireNum;
+		u16		voltage;
+		u16		amp;
+		u16		temp;
+	} hdr;
+
+	struct
+	{
+		u16		st;
+		u16		sl;
+		u16		sd;
+	} osc;
+
+	u16			data[128];
+};
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+extern	Rsp20*	GetReadyRsp20();
+extern	void	FreeRsp20(Rsp20 *rsp);
+extern	void	PrepareFire(u16 fireNum, u16 waveFreq, u16 waveAmp, bool pwm);
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

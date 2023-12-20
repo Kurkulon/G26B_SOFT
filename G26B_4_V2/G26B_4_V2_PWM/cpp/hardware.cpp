@@ -85,7 +85,7 @@ static volatile bool busyWriteThread = false;
 static bool busy_CRC_CCITT_DMA = false;
 
 const float pi = 3.14159265358979f;
-extern u16 curFireVoltage;
+//extern u16 curFireVoltage;
 u16 waveBuffer[1000] = {0};
 
 static i16 sinArr[256] = {0};
@@ -94,6 +94,21 @@ static i16 sinArr[256] = {0};
 //u16 waveAmp = 0;
 //u16 waveFreq = 3000; //Hz
 u16 waveLen = 2;
+
+static Rsp20 rsp20buf[8];
+
+static List<Rsp20>	freeRsp20;
+static List<Rsp20>	readyRsp20;
+
+static Rsp20 *hwRsp20 = 0;
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Rsp20* GetReadyRsp20() { return readyRsp20.Get(); }
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+void FreeRsp20(Rsp20 *rsp) { freeRsp20.Add(rsp); }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -341,37 +356,113 @@ static void WDT_Init()
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#ifdef DAC_TC
+#ifdef ADC_TCC
 
-	#define DACTC						HW::DAC_TC
-	#define DACTC_GEN					CONCAT2(GEN_,DAC_TC)
-	#define DACTC_GEN_CLK				CONCAT2(CLK_,DAC_TC) 
-	#define DACTC_IRQ					CONCAT2(DAC_TC,_IRQ)
-	#define GCLK_DACTC					CONCAT2(GCLK_,DAC_TC)
-	#define PID_DACTC					CONCAT2(PID_,DAC_TC)
+	#define ADCTCC						HW::ADC_TCC
+	#define ADC_GEN						CONCAT2(GEN_,ADC_TCC)
+	#define ADC_GEN_CLK					CONCAT2(CLK_,ADC_TCC) 
+	#define ADC_IRQ						CONCAT2(ADC_TCC,_0_IRQ)
+	#define GCLK_ADC					CONCAT2(GCLK_,ADC_TCC)
+	#define PID_ADC						CONCAT2(PID_,ADC_TCC)
 
-	#if (DACTC_GEN_CLK > 100000000)
-			#define DACTC_PRESC_NUM		8
-	#elif (DACTC_GEN_CLK > 50000000)
-			#define DACTC_PRESC_NUM		4
-	#elif (DACTC_GEN_CLK > 20000000)
-			#define DACTC_PRESC_NUM		2
-	#elif (DACTC_GEN_CLK > 10000000)
-			#define DACTC_PRESC_NUM		1
-	#elif (DACTC_GEN_CLK > 5000000)
-			#define DACTC_PRESC_NUM		1
+	#if (ADC_GEN_CLK > 100000000)
+			#define ADC_PRESC_NUM		4
+	#elif (ADC_GEN_CLK > 50000000)
+			#define ADC_PRESC_NUM		2
+	#elif (ADC_GEN_CLK > 20000000)
+			#define ADC_PRESC_NUM		1
+	#elif (ADC_GEN_CLK > 10000000)
+			#define ADC_PRESC_NUM		1
+	#elif (ADC_GEN_CLK > 5000000)
+			#define ADC_PRESC_NUM		1
 	#else
-			#define DACTC_PRESC_NUM		1
+			#define ADC_PRESC_NUM		1
 	#endif
 
-	#define DACTC_PRESC_DIV				CONCAT2(TC_PRESCALER_DIV,DACTC_PRESC_NUM)
-	#define US2DACTC(v)					(((v)*(DACTC_GEN_CLK/DACTC_PRESC_NUM)+500000)/1000000)
+	#define ADC_PRESC_DIV				CONCAT2(TCC_PRESCALER_DIV,ADC_PRESC_NUM)
+	#define US2ADC(v)					(((v)*(ADC_GEN_CLK/ADC_PRESC_NUM/1000)+500)/1000)
 
-	inline void DACTC_ClockEnable()		{ HW::GCLK->PCHCTRL[GCLK_DACTC] = DACTC_GEN|GCLK_CHEN; HW::MCLK->ClockEnable(PID_DACTC); }
+	#define ADC_EVSYS_USER				CONCAT3(EVSYS_USER_, ADC_TCC, _EV_0)
+
+	#define ADC_DMCH_TRIGSRC			CONCAT3(DMCH_TRIGSRC_, ADC_TCC, _OVF)
+
+	inline void ADC_ClockEnable()		{ HW::GCLK->PCHCTRL[GCLK_ADC] = ADC_GEN|GCLK_CHEN; HW::MCLK->ClockEnable(PID_ADC); }
 
 #else
-	#error  Must defined DAC_TC
+	#error  Must defined PWM_TCC
 #endif
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+static void PrepareWFMOSC(u16 fireNum, u16 waveFreq)
+{
+	const u16 N = 64;
+
+	ADCTCC->CTRLA &= ~TCC_ENABLE;
+
+	if (hwRsp20 == 0) hwRsp20 = freeRsp20.Get();
+
+	if (hwRsp20 == 0) return;
+
+	u16 t = ((1000000+waveFreq/2)/waveFreq + N/4)/(N/2);
+
+	Rsp20 &rsp = *hwRsp20;
+
+	rsp.hdr.fireNum = fireNum;
+	rsp.hdr.voltage = GetCurFireVoltage();
+	rsp.osc.st = t;
+	rsp.osc.sl = N;
+	rsp.osc.sd = 0;
+
+	while(ADCTCC->SYNCBUSY);
+
+	ADCTCC->CTRLA = PWM_PRESC_DIV;
+	ADCTCC->WAVE = TCC_WAVEGEN_NPWM;
+	ADCTCC->PER = US2ADC(t)-1;
+	ADCTCC->EVCTRL = TCC_TCEI0|TCC_EVACT0_RETRIGGER;
+	ADCTCC->INTENCLR = ~0;
+
+	ADCTCC->CTRLA |= TCC_ENABLE;
+
+	ADC_DMA.ReadPeripheral(&HW::ADC1->RESULT, rsp.data, rsp.osc.sl, DMCH_TRIGACT_BURST|ADC_DMCH_TRIGSRC, DMDSC_BEATSIZE_HWORD); 
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+static void Update_WFMOSC()
+{
+	if (hwRsp20 != 0)
+	{
+		if (ADC_DMA.CheckComplete())
+		{
+			ADCTCC->CTRLA &= ~TCC_ENABLE;
+
+			readyRsp20.Add(hwRsp20);
+
+			hwRsp20 = 0;
+		};
+	};
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+static void Init_WFMOSC()
+{
+	ADC_ClockEnable();
+
+	ADCTCC->CTRLA = PWM_PRESC_DIV;
+	ADCTCC->WAVE = TCC_WAVEGEN_NPWM;
+	ADCTCC->PER = US2PWM(pwmPeriodUS)-1;
+	ADCTCC->EVCTRL = TCC_TCEI0|TCC_EVACT0_RETRIGGER;
+	ADCTCC->INTENCLR = ~0;
+
+	HW::EVSYS->USER[ADC_EVSYS_USER] = EVENT_PWM_SYNC+1;
+
+	for (u16 i = 0; i < ArraySize(rsp20buf); i++) freeRsp20.Add(rsp20buf+i);
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -408,6 +499,8 @@ static __irq void PwmCountIRQ()
 {
 	HW::PIOB->BSET(23);
 
+	PIO_WF_PWM->EVCTRL.EV[0] = 0;
+	PIO_WF_PWM->SET(WF_PWM);
 	PIO_DRVEN->CLR(DRVEN);
 	PWMTCC->CTRLBSET = TCC_CMD_STOP;
 	//WFGTC->CTRLBSET = TC_CMD_STOP;
@@ -424,58 +517,59 @@ static __irq void PwmCountIRQ()
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-void PrepareFire(u16 waveFreq, u16 waveAmp, bool pwm)
+void PrepareFire(u16 fireNum, u16 waveFreq, u16 waveAmp, bool pwm)
 {
-	static u16 prevFreq = 0;
-	static u16 prevAmp = 0;
-
-	u16 hi, mid, lo, amp;
+	u16 hi, mid, lo;
+	i16 amp;
 	volatile void *dst;
 
 	HW::PIOA->BSET(21);
 
+	PrepareWFMOSC(fireNum, waveFreq);
+
 	pwmstat = false;
 	ppwmdata = waveBuffer; 
 	PIO_DRVEN->CLR(DRVEN);
+	PIO_WF_PWM->SET(WF_PWM);
 	PWMTCC->PERBUF = US2PWM(pwmPeriodUS);
 
-	//if (waveFreq != prevFreq || waveAmp != prevAmp)
+	waveLen = ((1000000 + waveFreq/2) / waveFreq + pwmPeriodUS/2) / pwmPeriodUS;
+
+	const u16 FV = MAX(GetCurFireVoltage(), 25);
+
+	if (pwm)
 	{
-		prevFreq = waveFreq;
-		prevAmp = waveAmp;
-
-		waveLen = ((1000000 + waveFreq/2) / waveFreq + pwmPeriodUS/2) / pwmPeriodUS;
-
 		waveAmp /= 8;
+		hi = US2PWM(pwmPeriodUS-0.5);
+		mid = US2PWM(pwmPeriodUS/2);
+		lo = US2PWM(0.5);
+		amp = (((u32)waveAmp*US2PWM(pwmPeriodUS)+FV/2)/FV+1)/2;
+		dst = &(PWMTCC->CCBUF[0]);
 
-		const u16 FV = MAX(curFireVoltage, 25);
+		PIO_WF_PWM->EVCTRL.EV[0] = 0;
 
-		if (pwm)
-		{
-			hi = US2PWM(pwmPeriodUS-0.5);
-			mid = US2PWM(pwmPeriodUS/2);
-			lo = US2PWM(0.5);
-			amp = (((u32)waveAmp*US2PWM(pwmPeriodUS)+FV/2)/FV+1)/2;
-			dst = &(PWMTCC->CCBUF[0]);
-		}
-		else
-		{
-			hi = 4095;
-			mid = 0x7FF;
-			lo = 0;
-			amp = 64;
-			dst = &(HW::DAC->DATA[0]);
-		};
+	}
+	else
+	{
+		hi = 4095;
+		mid = 0x7FF;
+		lo = 0;
+		amp = -(waveAmp*5/16);
+		dst = &(HW::DAC->DATA[0]);
+		
+		HW::EVSYS->USER[EVSYS_USER_PORT_EV_0] = EVENT_PWM_SYNC+1;
 
-		const u16 ki = 256 * ArraySize(sinArr) / waveLen;
-
-		for (u32 i = 0; i < waveLen; i++)
-		{
-			i16 t = mid + (amp*sinArr[(i*ki+127)>>8])/2048;		
-			waveBuffer[i] = LIM(t, lo, hi);
-		};
+		PIO_WF_PWM->EVCTRL.EV[0] = PORT_PORTEI|PORT_EVACT_CLR|PORT_PID(PIN_WF_PWM);
 	};
 
+	const u16 ki = 256 * ArraySize(sinArr) / waveLen;
+
+	for (u32 i = 0; i < waveLen; i++)
+	{
+		i16 t = mid + (amp*sinArr[(i*ki+127)>>8])/2048;		
+		waveBuffer[i] = LIM(t, lo, hi);
+	};
+	
 	PWMCOUNTTCC->PER = waveLen;
 	PWMCOUNTTCC->CC[0] = waveLen;
 
@@ -510,11 +604,12 @@ static void Init_PWM()
 	PIO_PWMH->SetWRCONFIG(PWMHB, PMUX_PWMHB|PORT_WRPMUX|PORT_WRPINCFG|PORT_PMUXEN);
 
 	PIO_WF_PWM->SET(WF_PWM);
-	PIO_POL->CLR(POLWLA|POLWHA|POLWLB|POLWHB);
+	PIO_POL->CLR(POLWLA|POLWHA);
+	PIO_POL->SET(POLWLB|POLWHB);
 
 	PWMTCC->CTRLA = PWM_PRESC_DIV;
-	PWMTCC->WAVE = TCC_WAVEGEN_NPWM|TCC_SWAP0;
-	PWMTCC->DRVCTRL = TCC_NRE0|TCC_NRE1|TCC_NRE4|TCC_NRE5|TCC_NRV0|TCC_NRV1;//(TCC_INVEN0 << PWMHA_WO_NUM)|(TCC_INVEN0 << PWMHB_WO_NUM);
+	PWMTCC->WAVE = TCC_WAVEGEN_NPWM;//|TCC_SWAP0;
+	PWMTCC->DRVCTRL = TCC_NRE0|TCC_NRE1|TCC_NRE4|TCC_NRE5|TCC_NRV0|TCC_NRV5;
 	PWMTCC->WEXCTRL = 0x01010F02;
 	PWMTCC->PER = US2PWM(pwmPeriodUS)-1;
 	PWMTCC->CCBUF[0] = US2PWM(pwmPeriodUS/2); 
@@ -816,6 +911,7 @@ void InitHardware()
 	Init_ADC();
 	Init_PWM();
 	Init_WaveFormGen();
+	Init_WFMOSC();
 
 	WDT_Init();
 
@@ -832,21 +928,11 @@ void UpdateHardware()
 {
 #ifndef WIN32
 
-//	static TM32 tm;
-
 	I2C_Update();
 
-	//static byte t = 0;
+	if (HW::DAC->SYNCBUSY == 0 && pwmstat) HW::DAC->DATA[0] = 0x7ff;
 
-	if (HW::DAC->SYNCBUSY == 0 && pwmstat) HW::DAC->DATA[0] = /*sinArr[t++]+*/0x7ff;
-
-//	Update_PWM();
-
-	//if (tm.Check(1000))
-	//{
-	//	HW::EVSYS->SWEVT = 1UL<<EVENT_PWM_SYNC;
-	//	PWMTCC->CTRLA |= TCC_ENABLE;
-	//};
+	Update_WFMOSC();
 
 #endif
 }
