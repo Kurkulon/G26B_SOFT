@@ -91,28 +91,12 @@
 				RelativePath=".\cpp\manch.cpp"
 				>
 			</File>
-			<File
-				RelativePath=".\cpp\options.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\cpp\req.cpp"
-				>
-			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
-			<File
-				RelativePath=".\cpp\COM_DEF.h"
-				>
-			</File>
-			<File
-				RelativePath=".\cpp\common.h"
-				>
-			</File>
 			<File
 				RelativePath=".\cpp\hardware.h"
 				>
@@ -131,14 +115,6 @@
 			</File>
 			<File
 				RelativePath=".\cpp\hw_rtm.h"
-				>
-			</File>
-			<File
-				RelativePath=".\cpp\main.h"
-				>
-			</File>
-			<File
-				RelativePath=".\cpp\options.h"
 				>
 			</File>
 			<File
