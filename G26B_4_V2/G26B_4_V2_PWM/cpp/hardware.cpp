@@ -396,7 +396,7 @@ static void WDT_Init()
 
 static void PrepareWFMOSC(u16 fireNum, u16 waveFreq)
 {
-	const u16 N = 64;
+	u16 N = 64;
 
 	ADCTCC->CTRLA &= ~TCC_ENABLE;
 
@@ -411,7 +411,7 @@ static void PrepareWFMOSC(u16 fireNum, u16 waveFreq)
 	rsp.hdr.fireNum = fireNum;
 	rsp.hdr.voltage = GetCurFireVoltage();
 	rsp.osc.st = t;
-	rsp.osc.sl = N;
+	rsp.osc.sl = (waveFreq >= 10000) ? (N*3/2) : N;
 	rsp.osc.sd = 0;
 
 	while(ADCTCC->SYNCBUSY);
@@ -564,9 +564,11 @@ void PrepareFire(u16 fireNum, u16 waveFreq, u16 waveAmp, bool pwm)
 
 	const u16 ki = 256 * ArraySize(sinArr) / waveLen;
 
+	if (waveFreq >= 10000) waveLen = waveLen * 3 / 2;
+
 	for (u32 i = 0; i < waveLen; i++)
 	{
-		i16 t = mid + (amp*sinArr[(i*ki+127)>>8])/2048;		
+		i16 t = mid + (amp*sinArr[(byte)((i*ki+127)>>8)])/2048;		
 		waveBuffer[i] = LIM(t, lo, hi);
 	};
 	
