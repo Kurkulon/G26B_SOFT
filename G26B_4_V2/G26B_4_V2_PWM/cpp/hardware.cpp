@@ -91,6 +91,8 @@ u16 waveBuffer[1000] = {0};
 static i16 sinArr[256] = {0};
 
 #define pwmPeriodUS 6
+#define HIGHFREQ	5000
+#define HF_KLEN		2	// 3/2
 //u16 waveAmp = 0;
 //u16 waveFreq = 3000; //Hz
 u16 waveLen = 2;
@@ -411,7 +413,7 @@ static void PrepareWFMOSC(u16 fireNum, u16 waveFreq)
 	rsp.hdr.fireNum = fireNum;
 	rsp.hdr.voltage = GetCurFireVoltage();
 	rsp.osc.st = t;
-	rsp.osc.sl = (waveFreq >= 10000) ? (N*3/2) : N;
+	rsp.osc.sl = (waveFreq >= HIGHFREQ) ? (N*HF_KLEN) : N;
 	rsp.osc.sd = 0;
 
 	while(ADCTCC->SYNCBUSY);
@@ -564,7 +566,7 @@ void PrepareFire(u16 fireNum, u16 waveFreq, u16 waveAmp, bool pwm)
 
 	const u16 ki = 256 * ArraySize(sinArr) / waveLen;
 
-	if (waveFreq >= 10000) waveLen = waveLen * 3 / 2;
+	if (waveFreq >= HIGHFREQ) waveLen = waveLen * HF_KLEN;
 
 	for (u32 i = 0; i < waveLen; i++)
 	{
