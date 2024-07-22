@@ -396,7 +396,7 @@ static void WDT_Init()
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-static void PrepareWFMOSC(u16 fireNum, u16 waveFreq)
+static void PrepareWFMOSC(u16 fireNum, u16 waveFreq, u16 klen)
 {
 	u16 N = 64;
 
@@ -413,7 +413,7 @@ static void PrepareWFMOSC(u16 fireNum, u16 waveFreq)
 	rsp.hdr.fireNum = fireNum;
 	rsp.hdr.voltage = GetCurFireVoltage();
 	rsp.osc.st = t;
-	rsp.osc.sl = (waveFreq >= HIGHFREQ) ? (N*HF_KLEN) : N;
+	rsp.osc.sl = N * klen / 2;
 	rsp.osc.sd = 0;
 
 	while(ADCTCC->SYNCBUSY);
@@ -527,7 +527,18 @@ void PrepareFire(u16 fireNum, u16 waveFreq, u16 waveAmp, bool pwm)
 
 	HW::PIOA->BSET(21);
 
-	PrepareWFMOSC(fireNum, waveFreq);
+	u16 kLen = 2;
+
+	if (waveAmp > 2100)
+	{
+		u16 t = waveAmp - 2100;
+	
+		kLen = 3 + (t / 460);
+
+		waveAmp = 2100;
+	};
+
+	PrepareWFMOSC(fireNum, waveFreq, kLen);
 
 	pwmstat = false;
 	ppwmdata = waveBuffer; 
@@ -566,7 +577,7 @@ void PrepareFire(u16 fireNum, u16 waveFreq, u16 waveAmp, bool pwm)
 
 	const u16 ki = 256 * ArraySize(sinArr) / waveLen;
 
-	if (waveFreq >= HIGHFREQ) waveLen = waveLen * HF_KLEN;
+	waveLen = waveLen * kLen / 2;
 
 	for (u32 i = 0; i < waveLen; i++)
 	{

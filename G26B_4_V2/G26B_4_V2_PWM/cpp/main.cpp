@@ -25,7 +25,7 @@
 
 #endif
 
-enum { VERSION = 0x101 };
+enum { VERSION = 0x102 };
 
 //#pragma O3
 //#pragma Otime
